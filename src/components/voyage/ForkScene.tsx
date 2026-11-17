@@ -34,6 +34,7 @@ export function ForkScene({
   const wakeRef = useRef<SVGPathElement | null>(null);
   const wakeCoreRef = useRef<SVGPathElement | null>(null);
   const revealRef = useRef<SVGRectElement | null>(null);
+  const channelsRef = useRef<SVGGElement | null>(null);
   const titleRef = useRef<HTMLDivElement | null>(null);
   const gatesRef = useRef<HTMLDivElement | null>(null);
   const anchors = useRef(new Map<PassageId, HTMLElement>());
@@ -130,6 +131,7 @@ export function ForkScene({
     // channels flow down from the ship
     const reveal = smoothstep(0.12, 0.42, p);
     revealRef.current?.setAttribute("height", String(lerp(l.cruise.y, l.H, reveal)));
+    channelsRef.current?.setAttribute("opacity", smoothstep(0.1, 0.2, p).toFixed(3));
 
     const title = titleRef.current;
     if (title) {
@@ -181,29 +183,38 @@ export function ForkScene({
             <clipPath id="fork-reveal">
               <rect ref={revealRef} x={0} y={0} width={layout.W} height={0} />
             </clipPath>
+            <filter id="fork-soft" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation={layout.phone ? 6 : 9} />
+            </filter>
           </defs>
-          <g clipPath="url(#fork-reveal)">
-            <path d={trunkPath(layout)} className="fill-none stroke-foam" strokeOpacity={0.1} strokeWidth={band} strokeLinecap="round" />
+          <g ref={channelsRef} clipPath="url(#fork-reveal)" opacity={0}>
+            {/* soft water glow under each channel */}
+            <g filter="url(#fork-soft)">
+              <path d={trunkPath(layout)} className="fill-none stroke-foam" strokeOpacity={0.12} strokeWidth={band} strokeLinecap="round" />
+              {passages.map((p) => (
+                <path
+                  key={p.id}
+                  d={channelPath(layout, p.id)}
+                  className={cn("fill-none transition-[stroke-opacity] duration-700", p.id === passage ? "stroke-haki" : "stroke-foam")}
+                  strokeOpacity={p.id === passage ? 0.22 : 0.1}
+                  strokeWidth={band}
+                  strokeLinecap="round"
+                />
+              ))}
+            </g>
+            {/* currents */}
             {passages.map((p) => {
               const chosen = p.id === passage;
               return (
-                <g key={p.id}>
-                  <path
-                    d={channelPath(layout, p.id)}
-                    className={cn("fill-none transition-[stroke-opacity] duration-700", chosen ? "stroke-haki" : "stroke-foam")}
-                    strokeOpacity={chosen ? 0.16 : 0.08}
-                    strokeWidth={band}
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d={channelPath(layout, p.id)}
-                    className={cn("animate-current fill-none", chosen ? "stroke-haki" : "stroke-foam")}
-                    strokeOpacity={chosen ? 0.95 : 0.35}
-                    strokeWidth={chosen ? 2.5 : 1.5}
-                    strokeDasharray="10 38"
-                    strokeLinecap="round"
-                  />
-                </g>
+                <path
+                  key={p.id}
+                  d={channelPath(layout, p.id)}
+                  className={cn("animate-current fill-none", chosen ? "stroke-haki" : "stroke-foam")}
+                  strokeOpacity={chosen ? 0.95 : 0.4}
+                  strokeWidth={chosen ? 2.5 : 1.5}
+                  strokeDasharray="10 38"
+                  strokeLinecap="round"
+                />
               );
             })}
             <path
@@ -221,16 +232,18 @@ export function ForkScene({
             ref={wakeRef}
             d={routePath(layout, passage)}
             className="fill-none stroke-foam"
-            strokeOpacity={0.18}
+            strokeOpacity={0.22}
             strokeWidth={layout.phone ? 16 : 22}
             strokeLinecap="round"
+            filter="url(#fork-soft)"
           />
           <path
             ref={wakeCoreRef}
             d={routePath(layout, passage)}
             className="fill-none stroke-foam"
-            strokeOpacity={0.55}
-            strokeWidth={layout.phone ? 3 : 4}
+            strokeOpacity={0.5}
+            strokeWidth={layout.phone ? 2 : 3}
+            strokeDasharray="1 0"
             strokeLinecap="round"
           />
         </svg>
@@ -244,7 +257,8 @@ export function ForkScene({
           className="pointer-events-none absolute left-0 top-0 origin-center will-change-transform"
           style={{ width: layout.box.width, height: layout.box.height, opacity: 0 }}
         >
-          <img src={SHIP_SPRITE} alt="" className="h-full w-full select-none" draggable={false} />
+          <ShipWake />
+          <img src={SHIP_SPRITE} alt="" className="relative h-full w-full select-none" draggable={false} />
         </div>
       )}
 
@@ -289,6 +303,28 @@ export function ForkScene({
         ))}
       </div>
     </div>
+  );
+}
+
+/** Bow wave and stern wash, drawn in the sprite's own 600×900 box so they turn with the ship. */
+function ShipWake() {
+  return (
+    <svg aria-hidden viewBox="0 0 600 900" className="absolute inset-0 h-full w-full overflow-visible">
+      <defs>
+        <linearGradient id="stern-wash" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stopColor="var(--foam)" stopOpacity="0.55" />
+          <stop offset="1" stopColor="var(--foam)" stopOpacity="0" />
+        </linearGradient>
+        <filter id="wake-soft" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="10" />
+        </filter>
+      </defs>
+      <g filter="url(#wake-soft)">
+        <path d="M300 80 L 250 -420 L 350 -420 Z" fill="url(#stern-wash)" />
+        <path d="M300 860 C 230 700 150 520 60 300" className="fill-none stroke-foam" strokeOpacity={0.32} strokeWidth={26} strokeLinecap="round" />
+        <path d="M300 860 C 370 700 450 520 540 300" className="fill-none stroke-foam" strokeOpacity={0.32} strokeWidth={26} strokeLinecap="round" />
+      </g>
+    </svg>
   );
 }
 

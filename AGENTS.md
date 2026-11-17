@@ -31,7 +31,11 @@ use the editor.
 
 ## Project rules
 
-- The opening scene scrubs the real uploaded video (fetched as a blob, seeked by scroll progress); never replace it with a frame/photo slideshow, because the owner explicitly asked for the video itself.
+- The opening scene scrubs the real uploaded video (fetched as a blob); never replace it with a frame/photo slideshow, because the owner explicitly asked for the video itself.
+- Video scrubbing loads a small quick clip first and swaps to the HD clip once downloaded, and moves forward by playing toward the scroll target (seeking only on reverse or big jumps), because per-frame seeking lagged.
+- After the video, the fork reuses a cut-out of the video's own last-frame ship over a matching sea plate, positioned in viewport pixels from the shared media geometry, so the handoff has no visible ship swap.
+- Smooth wheel scrolling (Lenis) runs on desktop only; phones keep native touch scrolling so it never feels sluggish.
+- Organisation names in copy are auto-linked by a shared rich-text renderer driven by the data module's link list, so a link is never forgotten in one spot.
 - All portfolio facts (achievements, years, skills, contacts) live in one data module and the UI only renders them, so content edits never touch layout code.
 - Passage selection is stored in the `passage` URL search param, so each passage is shareable and the back button works.
 - Island and campus artwork is inline SVG components, so it scales crisply and needs no image hosting.

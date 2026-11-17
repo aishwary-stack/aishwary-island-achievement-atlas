@@ -45,8 +45,9 @@ export function SkillFalls() {
       </div>
 
       <div className="relative mx-auto max-w-6xl px-4 md:px-8">
-        {/* the falls: right on phones (Route III came from the right), centre on desktop */}
-        <div aria-hidden className="absolute inset-y-0 right-4 w-[24%] overflow-clip md:left-1/2 md:right-auto md:w-[18%] md:-translate-x-1/2">
+        <div className="relative">
+        {/* the falls: right on phones (Route III came from the right), centre on desktop; they pour into the pool below */}
+        <div aria-hidden className="absolute -bottom-14 top-0 right-0 w-[24%] overflow-clip [mask-image:linear-gradient(to_bottom,black_calc(100%-3.5rem),transparent)] md:-bottom-20 md:left-1/2 md:right-auto md:w-[18%] md:-translate-x-1/2">
           <div className="absolute inset-0 bg-falls-base" />
           <div className="absolute inset-0 bg-falls-streaks-slow" />
           <div className="absolute inset-0 bg-falls-streaks" />
@@ -111,9 +112,10 @@ export function SkillFalls() {
             );
           })}
         </div>
+        </div>
 
         {/* splashdown pool */}
-        <div aria-hidden className="relative h-32 md:h-44">
+        <div aria-hidden className="relative h-32 overflow-hidden md:h-44">
           <div className="absolute inset-x-4 top-4 h-20 rounded-[50%] bg-sea-light/40 blur-sm md:inset-x-[20%]" />
           <div className="absolute right-[6%] top-8 h-14 w-[40%] animate-ripple rounded-[50%] border border-foam/40 md:left-1/2 md:right-auto md:w-[34%] md:-translate-x-1/2" />
           <div className="absolute right-[6%] top-8 h-14 w-[40%] animate-ripple rounded-[50%] border border-foam/25 [animation-delay:1.8s] md:left-1/2 md:right-auto md:w-[34%] md:-translate-x-1/2" />

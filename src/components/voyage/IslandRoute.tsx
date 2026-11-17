@@ -298,8 +298,13 @@ function LogCard({
         <header className="relative flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-ink/60 md:text-xs">
-              {island.period}
-              {island.location && <span className="font-semibold text-ink/50"> · {island.location}</span>}
+              <span className="whitespace-nowrap">{island.period}</span>
+              {island.location && (
+                <>
+                  {" · "}
+                  <span className="whitespace-nowrap font-semibold text-ink/50">{island.location}</span>
+                </>
+              )}
             </p>
             <h3 className="font-display mt-1.5 text-[clamp(1.55rem,6.4vw,2.6rem)] leading-[1.02] text-ink">
               {island.orgUrl ? (

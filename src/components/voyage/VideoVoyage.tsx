@@ -47,6 +47,7 @@ export function VideoVoyage({ passage, onChoose }: { passage: PassageId; onChoos
   const vignetteRef = useRef<HTMLDivElement | null>(null);
   const chapterRefs = useRef<(HTMLDivElement | null)[]>([]);
   const barRef = useRef<HTMLDivElement | null>(null);
+  const timelineRef = useRef<HTMLDivElement | null>(null);
   const hudRef = useRef<HTMLDivElement | null>(null);
   const coordRef = useRef<HTMLSpanElement | null>(null);
   const timeRef = useRef<HTMLSpanElement | null>(null);
@@ -92,7 +93,9 @@ export function VideoVoyage({ passage, onChoose }: { passage: PassageId; onChoos
     });
 
     if (barRef.current) barRef.current.style.transform = `scaleX(${pv.toFixed(4)})`;
-    if (hudRef.current) hudRef.current.style.opacity = (1 - smoothstep(0.92, 1, pv)).toFixed(3);
+    const hud = (1 - smoothstep(0.92, 1, pv)).toFixed(3);
+    if (hudRef.current) hudRef.current.style.opacity = hud;
+    if (timelineRef.current) timelineRef.current.style.opacity = hud;
     if (hintRef.current) hintRef.current.style.opacity = String(1 - smoothstep(0.005, 0.04, pv));
 
     const text = `${lerp(FROM.lat, TO.lat, pv).toFixed(2)}°N · ${lerp(FROM.lon, TO.lon, pv).toFixed(2)}°E`;
@@ -150,8 +153,8 @@ export function VideoVoyage({ passage, onChoose }: { passage: PassageId; onChoos
           </div>
         </div>
 
-        {/* Chapters */}
-        <div className="absolute inset-0 z-20">
+        {/* Chapters (only their text takes clicks, so the fork's gates stay tappable) */}
+        <div className="pointer-events-none absolute inset-0 z-20">
           <ChapterCard refFn={setChapterRef(0)} align="center">
             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-haki md:text-sm">
               Log 01 · <span className="font-jp tracking-normal">航海の始まり</span>
@@ -232,16 +235,21 @@ export function VideoVoyage({ passage, onChoose }: { passage: PassageId; onChoos
         {/* Scroll hint */}
         <div
           ref={hintRef}
-          className="pointer-events-none absolute inset-x-0 bottom-12 z-20 flex flex-col items-center gap-3 text-foam/80 md:bottom-16"
+          className="pointer-events-none absolute inset-x-0 bottom-9 z-20 flex flex-col items-center gap-3 text-foam/80 md:bottom-16"
         >
-          <span className="text-[11px] font-semibold uppercase tracking-[0.3em]">Scroll to set sail</span>
-          <span className="relative h-10 w-6 rounded-full border border-foam/50">
+          <span className="hidden text-[11px] font-semibold uppercase tracking-[0.3em] md:inline">Scroll to set sail</span>
+          <span className="relative hidden h-10 w-6 rounded-full border border-foam/50 md:block">
             <span className="absolute left-1/2 top-2 h-2 w-1 -translate-x-1/2 animate-bounce rounded-full bg-haki" />
+          </span>
+          <span aria-hidden className="flex animate-bounce flex-col items-center leading-none text-haki md:hidden">
+            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="m6 9 6 6 6-6" />
+            </svg>
           </span>
         </div>
 
         {/* Timeline */}
-        <div className="pointer-events-none absolute inset-x-4 bottom-5 z-20 md:inset-x-10">
+        <div ref={timelineRef} className="pointer-events-none absolute inset-x-4 bottom-5 z-20 md:inset-x-10">
           <div className="relative h-px w-full bg-foam/20">
             <div ref={barRef} className="absolute inset-0 origin-left scale-x-0 bg-haki" />
           </div>
@@ -285,14 +293,14 @@ function ChapterCard({
     <div
       ref={refFn}
       className={cn(
-        "absolute inset-0 flex px-5 pb-24 will-change-[opacity,transform] md:px-16 md:pb-0",
+        "pointer-events-none absolute inset-0 flex px-5 pb-24 will-change-[opacity,transform] md:px-16 md:pb-0",
         align === "center" && "items-end justify-center text-center md:items-center",
         align === "left" && "items-end justify-start md:items-center",
         align === "right" && "items-end justify-end text-right md:items-center",
       )}
       style={{ opacity: 0, visibility: "hidden" }}
     >
-      <div className="relative w-full max-w-3xl md:w-auto">
+      <div className="pointer-events-auto relative w-full max-w-3xl md:w-auto">
         {/* soft shadow pool so text stays legible on bright frames */}
         <div
           aria-hidden
