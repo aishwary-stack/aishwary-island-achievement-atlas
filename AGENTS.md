@@ -28,3 +28,10 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Project rules
+
+- The opening scene scrubs the real uploaded video (fetched as a blob, seeked by scroll progress); never replace it with a frame/photo slideshow, because the owner explicitly asked for the video itself.
+- All portfolio facts (achievements, years, skills, contacts) live in one data module and the UI only renders them, so content edits never touch layout code.
+- Passage selection is stored in the `passage` URL search param, so each passage is shareable and the back button works.
+- Island and campus artwork is inline SVG components, so it scales crisply and needs no image hosting.

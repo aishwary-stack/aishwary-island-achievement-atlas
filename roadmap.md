@@ -1,13 +1,20 @@
 # Roadmap — Aishwary Nagaria "Grand Line" portfolio
 
-- [ ] Process uploaded video: remove Gemini logo, strip audio, encode for smooth scroll-scrubbing (desktop + mobile)
-- [ ] Upload video via lovable-assets, wire into scroll-scrubbed hero (real video, not frame slideshow)
-- [ ] Research content: LinkedIn (Aishwary Nagaria), IIMK BMS, IIMB BBA DBE, McKinsey Forward, Hiroshima Univ AGILE COIL
-- [ ] Fork section: ship reaches 3 passages (Education / Entrepreneurship centre / Skills)
-- [ ] Education & Entrepreneurship as island chains with year per achievement; click opens full detail
-- [ ] Miniature IIM B + IIM K islands with ship sailing from both
-- [ ] Skills as waterfall descent (all LinkedIn skills + Google Sheets)
-- [ ] Contact: email, Instagram @aishwarynagaria, LinkedIn
-- [ ] Head metadata, design tokens, mobile layout, reduced-motion fallback
-- [ ] Verify in browser (desktop + mobile), commit
-- [ ] Answer user: "good next step after remix" -> reply once build is done (suggest publish)
+## Done
+- [x] Uploaded video cleaned (Gemini mark removed, audio stripped) and encoded for scroll-scrubbing (desktop + mobile)
+- [x] Scroll-scrubbed opening voyage using the real video, with timed captions and HUD
+- [x] Content research: IIMK BMS, IIMB BBA DBE, McKinsey Forward, Hiroshima AGILE, Open Cupboard, writing, campaigns
+- [x] Fork scene: ship follows the chosen passage (Education / Entrepreneurship centre / Skills)
+- [x] Education + Entrepreneurship island chains with years; click opens the full ship's log
+- [x] Miniature IIM Kozhikode + IIM Bangalore islands
+- [x] Skills waterfall descent (LinkedIn skills + Google Sheets)
+- [x] Contact port: email (copy), Instagram, LinkedIn
+- [x] Head metadata, design tokens, phone layouts, reduced-motion handling
+- [x] Readable display font, phone-sized passage labels
+- [x] Browser checks (desktop + phone): video, fork, passages, dialogs, copy email
+- [x] Answered "good next step after remix" -> publish
+
+## Ready
+- [ ] Generate painted island illustrations once image credits are available (current art is hand-drawn SVG)
+- [ ] Add exact LinkedIn dates/company for the digital marketing role once Aishwary confirms them
+- [ ] Optional: subtle ocean ambience toggle (muted by default)
