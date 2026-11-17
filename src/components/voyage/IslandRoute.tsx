@@ -248,8 +248,10 @@ function IslandArtButton({
         align === "right" && "self-end md:self-auto",
       )}
     >
-      <span aria-hidden className="absolute inset-x-[8%] bottom-[6%] h-[22%] animate-ripple rounded-[50%] border border-foam/25" />
-      <span aria-hidden className="absolute inset-x-[8%] bottom-[6%] h-[22%] animate-ripple rounded-[50%] border border-foam/15 [animation-delay:2.2s]" />
+      <span aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-[2rem]">
+        <span className="absolute inset-x-[8%] bottom-[6%] h-[22%] animate-ripple rounded-[50%] border border-foam/25" />
+        <span className="absolute inset-x-[8%] bottom-[6%] h-[22%] animate-ripple rounded-[50%] border border-foam/15 [animation-delay:2.2s]" />
+      </span>
       <span className="block animate-bob">
         <IslandArt art={island.art} title={`${island.title} island`} className="drop-shadow-[0_24px_30px_var(--sea-abyss)]" />
       </span>

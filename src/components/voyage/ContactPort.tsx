@@ -72,12 +72,11 @@ export function ContactPort() {
   );
 }
 
-/** A One Piece-style bounty poster with his real photo, and two snapshots pinned beside it. */
+/** A One Piece-style bounty poster with his real photo. */
 function PosterWall() {
-  const [hills, festive] = portraits.crew;
   return (
-    <div className="relative mx-auto w-full max-w-[24rem] md:max-w-[26rem]">
-      <div className="@container relative z-10 mx-auto w-[86%] -rotate-[1.5deg] bg-parchment px-[6%] pb-[6%] pt-[5%] text-ink shadow-poster md:w-[80%]">
+    <div className="relative mx-auto w-full max-w-[26rem] md:max-w-[30rem]">
+      <div className="@container relative z-10 mx-auto w-[94%] -rotate-[1.5deg] bg-parchment px-[6%] pb-[6%] pt-[5%] text-ink shadow-poster md:w-[88%]">
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-grain opacity-30 mix-blend-multiply" />
         <div aria-hidden className="pointer-events-none absolute inset-0 shadow-[inset_0_0_42px_color-mix(in_oklch,var(--wood)_45%,transparent)]" />
         <p className="font-poster relative text-center text-[23.5cqw] leading-[0.82] tracking-[0.01em]">WANTED</p>
@@ -101,51 +100,7 @@ function PosterWall() {
           Wanted by founders · recruiters · crews
         </p>
       </div>
-
-      {/* snapshots pinned under the poster, never over its text */}
-      <div className="relative z-20 -mt-[3%] flex items-start justify-between px-[3%]">
-        {hills && (
-          <Polaroid
-            src={hills.src}
-            alt={hills.alt}
-            caption={hills.caption}
-            className="relative w-[50%] -rotate-[5deg]"
-            aspect="aspect-[4/3]"
-          />
-        )}
-        {festive && (
-          <Polaroid
-            src={festive.src}
-            alt={festive.alt}
-            caption={festive.caption}
-            className="relative mt-[5%] w-[42%] rotate-[4deg]"
-            aspect="aspect-[4/5]"
-          />
-        )}
-      </div>
     </div>
-  );
-}
-
-function Polaroid({
-  src,
-  alt,
-  caption,
-  className,
-  aspect,
-}: {
-  src: string;
-  alt: string;
-  caption: string;
-  className?: string;
-  aspect: string;
-}) {
-  return (
-    <figure className={`bg-moon p-[5%] pb-0 shadow-poster ${className ?? ""}`}>
-      <span aria-hidden className="absolute -top-3 left-1/2 h-5 w-[42%] -translate-x-1/2 -rotate-3 bg-parchment/80 shadow-sm" />
-      <img src={src} alt={alt} className={`${aspect} w-full object-cover`} loading="lazy" />
-      <figcaption className="font-hand px-1 py-[6%] text-center text-[clamp(0.95rem,3.8vw,1.25rem)] leading-none text-ink">{caption}</figcaption>
-    </figure>
   );
 }
 

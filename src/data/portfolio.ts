@@ -2,8 +2,6 @@
  * Every word on the voyage lives here. Facts come from Aishwary's LinkedIn
  * (experience + skills), his IIMK journey post and the official program sites.
  */
-import festivePhoto from "@/assets/aishwary-festive.jpg.asset.json";
-import hillsPhoto from "@/assets/aishwary-hills.jpg.asset.json";
 import wantedPhoto from "@/assets/aishwary-wanted.jpg.asset.json";
 
 export type PassageId = "education" | "experience" | "skills";
@@ -460,8 +458,4 @@ export const skillGroups: SkillGroup[] = [
 
 export const portraits = {
   wanted: { src: wantedPhoto.url, alt: "Aishwary Nagaria in sunglasses and a Starry Night shirt" },
-  crew: [
-    { src: hillsPhoto.url, alt: "Aishwary sitting on a hilltop above green valleys", caption: "Off duty. Still scouting." },
-    { src: festivePhoto.url, alt: "Aishwary in a kurta on a festive night by the lake", caption: "Festival nights" },
-  ],
 } as const;

@@ -293,7 +293,7 @@ function ChapterCard({
     <div
       ref={refFn}
       className={cn(
-        "pointer-events-none absolute inset-0 flex px-5 pb-24 will-change-[opacity,transform] md:px-16 md:pb-0",
+        "pointer-events-none absolute inset-0 flex overflow-hidden px-5 pb-24 will-change-[opacity,transform] md:px-16 md:pb-0",
         align === "center" && "items-end justify-center text-center md:items-center",
         align === "left" && "items-end justify-start md:items-center",
         align === "right" && "items-end justify-end text-right md:items-center",
