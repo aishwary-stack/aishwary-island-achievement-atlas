@@ -1,23 +1,25 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { ContactPort } from "@/components/voyage/ContactPort";
 import { FireflySky } from "@/components/voyage/FireflySky";
-import { ForkScene } from "@/components/voyage/ForkScene";
 import { IslandDialog } from "@/components/voyage/IslandDialog";
 import { PassageSection } from "@/components/voyage/PassageSection";
 import { VideoVoyage } from "@/components/voyage/VideoVoyage";
 import { VoyageNav } from "@/components/voyage/VoyageNav";
 import type { Island, PassageId } from "@/data/portfolio";
-import { DEFAULT_PASSAGE, isPassageId } from "@/lib/voyage";
+import { scrollToElement, startSmoothScroll } from "@/lib/smooth-scroll";
+import { DEFAULT_PASSAGE, normalizePassage } from "@/lib/voyage";
 
-const TITLE = "Aishwary Nagaria · Founder, Builder & Dual-IIM Scholar";
+const TITLE = "Aishwary Nagaria · Founder, Developer & Dual-IIM Scholar";
 const DESCRIPTION =
-  "Sail the Grand Line with Aishwary Nagaria: Founder & CTO of Open Cupboard, studying at IIM Kozhikode (BMS) and IIM Bangalore (BBA DBE) at the same time.";
+  "Sail the Grand Line with Aishwary Nagaria: Founder & CTO of Open Cupboard (₹0 → ₹1 Lakh in 3 weeks), studying at IIM Kozhikode and IIM Bangalore at the same time.";
 
 export const Route = createFileRoute("/")({
-  validateSearch: (search: Record<string, unknown>): { passage?: PassageId } =>
-    isPassageId(search["passage"]) ? { passage: search["passage"] } : {},
+  validateSearch: (search: Record<string, unknown>): { passage?: PassageId } => {
+    const passage = normalizePassage(search["passage"]);
+    return passage ? { passage } : {};
+  },
   head: () => ({
     meta: [
       { title: TITLE },
@@ -39,13 +41,13 @@ function Index() {
   const navigate = useNavigate({ from: "/" });
   const [openIsland, setOpenIsland] = useState<Island | null>(null);
 
+  useEffect(() => startSmoothScroll(), []);
+
   const choose = useCallback(
     (id: PassageId) => {
       void navigate({ search: { passage: id }, replace: true, resetScroll: false });
       // Wait for the new passage to render, then sail to it.
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => document.getElementById("passage")?.scrollIntoView({ behavior: "smooth" })),
-      );
+      requestAnimationFrame(() => requestAnimationFrame(() => scrollToElement("passage")));
     },
     [navigate],
   );
@@ -55,8 +57,7 @@ function Index() {
       <FireflySky />
       <VoyageNav passage={passage} onChoose={choose} />
       <main>
-        <VideoVoyage />
-        <ForkScene passage={passage} onChoose={choose} />
+        <VideoVoyage passage={passage} onChoose={choose} />
         <PassageSection passage={passage} onChoose={choose} onOpen={setOpenIsland} />
         <ContactPort />
       </main>

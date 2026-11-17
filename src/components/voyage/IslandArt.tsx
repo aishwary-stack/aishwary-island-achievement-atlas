@@ -314,29 +314,66 @@ function Marketing() {
   );
 }
 
-function Writing() {
-  // A library tower with a giant quill sunk in an inkwell and pages taking flight.
+function EdTech() {
+  // A giant phone streaming a lesson, a play-button billboard and a chalkboard.
   return (
     <g>
-      <rect x={70} y={56} width={44} height={80} className="fill-rock" />
-      <path d="M64 58 L92 30 L120 58Z" className="fill-roof" />
-      <circle cx={92} cy={76} r={9} className="fill-glow animate-flicker" />
-      <path d="M92 67 v18 M83 76 h18" className="stroke-rock-deep" strokeWidth={2} />
-      <rect x={78} y={96} width={8} height={12} className="fill-glow" opacity={0.8} />
-      <rect x={98} y={96} width={8} height={12} className="fill-glow" opacity={0.8} />
-      <path d="M84 136 v-16 a8 8 0 0 1 16 0 v16z" className="fill-wood" />
-      {/* inkwell + quill */}
-      <path d="M140 136 C 136 122 140 112 160 112 C 180 112 184 122 180 136Z" className="fill-sea-abyss" />
-      <ellipse cx={160} cy={112} rx={14} ry={4} className="fill-rock-deep" />
-      <path d="M160 112 C 168 80 190 50 214 26 C 206 58 190 86 164 112Z" className="fill-moon" />
-      <path d="M160 112 C 172 84 192 54 214 26" className="fill-none stroke-rock" strokeWidth={1.6} />
-      <path d="M172 90 l10 -2 M180 76 l10 -1 M188 62 l9 -2" className="stroke-rock" strokeWidth={1.2} />
-      {/* pages */}
-      <path d="M120 40 l14 -4 l3 12 l-14 4z" className="fill-parchment" />
-      <path d="M140 24 l12 2 l-2 11 l-12 -2z" className="fill-parchment" opacity={0.85} />
-      <path d="M52 44 l12 -2 l2 10 l-12 2z" className="fill-parchment" opacity={0.7} />
-      <Palm x={206} y={146} s={0.75} flip />
-      <Tree x={52} y={142} r={10} />
+      {/* chalkboard */}
+      <rect x={52} y={86} width={54} height={36} rx={2} className="fill-jungle-deep" />
+      <rect x={52} y={86} width={54} height={36} rx={2} className="fill-none stroke-wood" strokeWidth={3} />
+      <path d="M60 98 h18 M60 106 h30 M60 114 h22" className="stroke-moon" strokeWidth={1.6} strokeLinecap="round" opacity={0.8} />
+      <path d="M84 96 l6 6 l10 -10" className="fill-none stroke-gold" strokeWidth={2} strokeLinecap="round" />
+      <rect x={62} y={122} width={4} height={16} className="fill-wood" />
+      <rect x={92} y={122} width={4} height={16} className="fill-wood" />
+      {/* phone */}
+      <rect x={118} y={36} width={52} height={98} rx={9} className="fill-rock-deep" />
+      <rect x={122} y={44} width={44} height={80} rx={4} className="fill-sea-abyss" />
+      <rect x={122} y={44} width={44} height={34} rx={4} className="fill-ember" />
+      <path d="M139 53 L139 69 L152 61Z" className="fill-moon" />
+      <rect x={126} y={84} width={36} height={4} rx={2} className="fill-moon" opacity={0.7} />
+      <rect x={126} y={92} width={26} height={4} rx={2} className="fill-moon" opacity={0.45} />
+      <rect x={126} y={102} width={36} height={14} rx={3} className="fill-haki" opacity={0.85} />
+      <circle cx={144} cy={129} r={2.2} className="fill-moon" opacity={0.5} />
+      {/* subscriber counter rising */}
+      <path d="M176 112 L190 98 L200 104 L214 82" className="fill-none stroke-haki" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M208 80 L216 80 L216 88" className="fill-none stroke-haki" strokeWidth={3} strokeLinecap="round" />
+      <Palm x={218} y={146} s={0.75} flip />
+      <Tree x={40} y={144} r={9} />
+    </g>
+  );
+}
+
+function ArtShop() {
+  // An easel with a fresh sketch, a giant pencil and a palette: the first shop.
+  return (
+    <g>
+      {/* easel */}
+      <path d="M96 136 L118 48 M150 136 L128 48 M123 48 L123 136" className="stroke-wood" strokeWidth={4} strokeLinecap="round" />
+      <rect x={88} y={56} width={70} height={56} rx={2} className="fill-moon" />
+      <rect x={88} y={56} width={70} height={56} rx={2} className="fill-none stroke-wood" strokeWidth={3} />
+      <rect x={86} y={110} width={74} height={5} className="fill-wood" />
+      {/* the sketch on the canvas */}
+      <path d="M98 100 Q110 72 122 88 T146 74" className="fill-none stroke-ink" strokeWidth={2} strokeLinecap="round" />
+      <circle cx={140} cy={68} r={6} className="fill-gold" />
+      <path d="M98 104 h48" className="stroke-ink" strokeWidth={1} opacity={0.4} />
+      {/* giant pencil */}
+      <g transform="rotate(-28 190 96)">
+        <rect x={180} y={50} width={14} height={70} className="fill-gold" />
+        <rect x={180} y={50} width={14} height={9} className="fill-blossom" />
+        <rect x={180} y={58} width={14} height={4} className="fill-rock" />
+        <path d="M180 120 L187 136 L194 120Z" className="fill-sand" />
+        <path d="M185 130 L187 136 L189 130Z" className="fill-ink" />
+      </g>
+      {/* palette */}
+      <path d="M44 132 C 40 112 64 104 80 110 C 92 114 88 124 80 124 C 72 124 74 134 66 136 C 56 138 46 140 44 132Z" className="fill-wood" />
+      <circle cx={56} cy={118} r={4} className="fill-ember" />
+      <circle cx={67} cy={113} r={3.6} className="fill-haki" />
+      <circle cx={78} cy={116} r={3.4} className="fill-gold" />
+      <circle cx={54} cy={129} r={3.4} className="fill-sea-light" />
+      {/* price tag */}
+      <path d="M160 128 l16 -6 l6 12 l-16 6z" className="fill-parchment" />
+      <circle cx={164} cy={130} r={1.6} className="fill-ink" />
+      <Palm x={222} y={148} s={0.7} flip />
     </g>
   );
 }
@@ -349,7 +386,8 @@ const LANDMARKS: Record<IslandArtKind, () => React.JSX.Element> = {
   opencupboard: OpenCupboard,
   ecell: ECell,
   marketing: Marketing,
-  writing: Writing,
+  edtech: EdTech,
+  anarts: ArtShop,
 };
 
 export function IslandArt({
@@ -370,7 +408,7 @@ export function IslandArt({
       aria-label={title}
       aria-hidden={title ? undefined : true}
     >
-      <Base sandy={art === "writing"} />
+      <Base sandy={art === "anarts"} />
       <Landmark />
     </svg>
   );

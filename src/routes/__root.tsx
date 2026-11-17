@@ -85,7 +85,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Aishwary Nagaria · The Grand Line Portfolio" },
       {
         name: "description",
-        content: "Aishwary Nagaria: Founder & CTO of Open Cupboard, studying at IIM Kozhikode and IIM Bangalore.",
+        content: "Aishwary Nagaria: Founder, developer and dual-IIM scholar. Founder & CTO of Open Cupboard.",
       },
       { name: "author", content: "Aishwary Nagaria" },
       { property: "og:title", content: "Aishwary Nagaria · The Grand Line Portfolio" },
@@ -101,7 +101,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=JetBrains+Mono:wght@400;600&family=New+Rocker&family=Zen+Antique&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=JetBrains+Mono:wght@400;600&family=New+Rocker&family=Zen+Antique&family=Playfair+Display:wght@700;900&family=Caveat:wght@600&display=swap",
       },
       {
         rel: "stylesheet",

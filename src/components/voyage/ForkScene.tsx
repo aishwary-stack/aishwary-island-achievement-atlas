@@ -1,239 +1,324 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState, type MutableRefObject } from "react";
 
-import shipImg from "@/assets/ship-sunny.webp";
 import { passages, type PassageId } from "@/data/portfolio";
-import { stickyProgress, useFrameLoop } from "@/hooks/use-frame-loop";
-import { useTilt } from "@/hooks/use-tilt";
-import { lerp, passageStats, smoothstep } from "@/lib/voyage";
+import { useFrameLoop } from "@/hooks/use-frame-loop";
+import { lerp, smoothstep } from "@/lib/voyage";
 import { cn } from "@/lib/utils";
 
-import { bandPolygon, CHANNELS, channelPath, shipOnFork, TRUNK } from "./channels";
+import { channelPath, computeForkLayout, routePath, trunkPath, type ForkLayout, type Pt } from "./fork-geometry";
+import { SHIP_SPRITE, type VoyageVariant } from "./voyage-media";
+
+const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
 
 /**
- * The fork: the ship comes down out of the video and the sea splits into three.
- * Scroll moves the ship; the chosen passage decides which channel it turns into.
+ * The fork, layered on top of the video's final frame. The same ship (cut out of that
+ * frame) and the same sea take over seamlessly, then the sea splits into three routes.
+ * `progress` is 0–1 through the fork and is written by the parent each frame.
  */
-export function ForkScene({ passage, onChoose }: { passage: PassageId; onChoose: (id: PassageId) => void }) {
-  const sectionRef = useRef<HTMLElement | null>(null);
+export function ForkScene({
+  passage,
+  onChoose,
+  variant,
+  progress,
+}: {
+  passage: PassageId;
+  onChoose: (id: PassageId) => void;
+  variant: VoyageVariant;
+  progress: MutableRefObject<number>;
+}) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const plateRef = useRef<HTMLImageElement | null>(null);
+  const shadeRef = useRef<HTMLDivElement | null>(null);
   const shipRef = useRef<HTMLDivElement | null>(null);
+  const routeRef = useRef<SVGPathElement | null>(null);
+  const wakeRef = useRef<SVGPathElement | null>(null);
+  const wakeCoreRef = useRef<SVGPathElement | null>(null);
+  const revealRef = useRef<SVGRectElement | null>(null);
   const titleRef = useRef<HTMLDivElement | null>(null);
   const gatesRef = useRef<HTMLDivElement | null>(null);
-  const fogRef = useRef<HTMLDivElement | null>(null);
-  const state = useRef({ x: 50, y: 12, heading: 0, p: 0 });
-  const passageRef = useRef(passage);
-  passageRef.current = passage;
-  const [aspect, setAspect] = useState(16 / 9);
+  const anchors = useRef(new Map<PassageId, HTMLElement>());
+  const [layout, setLayout] = useState<ForkLayout | null>(null);
+  const layoutRef = useRef<ForkLayout | null>(null);
+  const state = useRef({ p: 0, x: 0, y: 0, heading: 0, scale: 1, total: 0, placed: false });
 
-  useEffect(() => {
-    const onResize = () => setAspect(window.innerWidth / Math.max(1, window.innerHeight));
-    onResize();
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
+  const measure = useCallback(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const r = root.getBoundingClientRect();
+    if (r.width < 10 || r.height < 10) return;
+    const gates = {} as Record<PassageId, Pt>;
+    for (const p of passages) {
+      const el = anchors.current.get(p.id);
+      const g = el?.getBoundingClientRect();
+      gates[p.id] = g ? { x: g.left + g.width / 2 - r.left, y: g.top - r.top } : { x: r.width / 2, y: r.height * 0.85 };
+    }
+    const next = computeForkLayout(r.width, r.height, variant, gates);
+    layoutRef.current = next;
+    setLayout(next);
+  }, [variant]);
+
+  useLayoutEffect(() => {
+    measure();
+    const root = rootRef.current;
+    if (!root || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => measure());
+    ro.observe(root);
+    return () => ro.disconnect();
+  }, [measure]);
+
+  // Re-read the route length whenever the route changes.
+  useLayoutEffect(() => {
+    const route = routeRef.current;
+    if (!route || !layout) return;
+    state.current.total = route.getTotalLength();
+    const dash = `${state.current.total} ${state.current.total + 1}`;
+    wakeRef.current?.setAttribute("stroke-dasharray", dash);
+    wakeCoreRef.current?.setAttribute("stroke-dasharray", dash);
+  }, [layout, passage]);
 
   useFrameLoop(() => {
-    const section = sectionRef.current;
-    if (!section) return;
-    const p = stickyProgress(section);
+    const l = layoutRef.current;
+    const route = routeRef.current;
+    if (!l || !route) return;
     const s = state.current;
-    s.p = lerp(s.p, p, 0.14);
-    const target = shipOnFork(passageRef.current, s.p);
-    s.x = lerp(s.x, target.x, 0.12);
-    s.y = lerp(s.y, target.y, 0.12);
-    s.heading = lerp(s.heading, target.heading, 0.1);
+    const pf = progress.current;
+    // Smooth only after the hand-off, so the ship sits exactly on the video's ship at first.
+    s.p = pf < 0.02 ? pf : lerp(s.p, pf, 0.2);
+    const p = s.p;
+
+    const appear = smoothstep(0, 0.05, p);
+    if (plateRef.current) plateRef.current.style.opacity = appear.toFixed(3);
+    if (shadeRef.current) shadeRef.current.style.opacity = smoothstep(0.04, 0.24, p).toFixed(3);
+
+    // 1. rise from the video's framing to the cruising spot
+    const rise = ease(smoothstep(0.03, 0.3, p));
+    let x = lerp(l.start.x, l.cruise.x, rise);
+    let y = lerp(l.start.y, l.cruise.y, rise);
+    let heading = 0;
+    let scale = lerp(1, l.cruiseScale, rise);
+
+    // 2. sail the chosen route
+    const sail = ease(smoothstep(0.46, 1, p));
+    const along = s.total * sail;
+    if (sail > 0 && s.total > 0) {
+      const pt = route.getPointAtLength(along);
+      const a = route.getPointAtLength(Math.min(s.total, along + 8));
+      const b = route.getPointAtLength(Math.max(0, along - 8));
+      x = pt.x;
+      y = pt.y;
+      heading = (Math.atan2(-(a.x - b.x), a.y - b.y) * 180) / Math.PI;
+      scale = lerp(l.cruiseScale, l.endScale, sail);
+    }
+
+    const settled = p < 0.04 || !s.placed;
+    const k = settled ? 1 : 0.22;
+    s.x = lerp(s.x, x, k);
+    s.y = lerp(s.y, y, k);
+    s.heading = lerp(s.heading, heading, settled ? 1 : 0.16);
+    s.scale = lerp(s.scale, scale, k);
+    s.placed = true;
 
     const ship = shipRef.current;
     if (ship) {
-      const scale = 0.72 + s.p * 0.26;
-      ship.style.left = `${s.x}%`;
-      ship.style.top = `${s.y}%`;
-      ship.style.transform = `translate(-50%, -50%) rotate(${s.heading.toFixed(2)}deg) scale(${scale.toFixed(3)})`;
+      ship.style.opacity = appear.toFixed(3);
+      ship.style.transform = `translate3d(${(s.x - l.box.width / 2).toFixed(1)}px, ${(s.y - l.box.height / 2).toFixed(1)}px, 0) rotate(${s.heading.toFixed(2)}deg) scale(${s.scale.toFixed(4)})`;
     }
+    const wakeOffset = String(s.total - along);
+    wakeRef.current?.setAttribute("stroke-dashoffset", wakeOffset);
+    wakeCoreRef.current?.setAttribute("stroke-dashoffset", wakeOffset);
+
+    // channels flow down from the ship
+    const reveal = smoothstep(0.12, 0.42, p);
+    revealRef.current?.setAttribute("height", String(lerp(l.cruise.y, l.H, reveal)));
+
     const title = titleRef.current;
     if (title) {
-      const o = smoothstep(0.04, 0.2, p) * (1 - smoothstep(0.86, 1, p) * 0.4);
+      const o = smoothstep(0.1, 0.24, p);
       title.style.opacity = o.toFixed(3);
-      title.style.transform = `translate3d(0, ${((1 - o) * 30).toFixed(1)}px, 0)`;
+      title.style.transform = `translate3d(0, ${((1 - o) * 24).toFixed(1)}px, 0)`;
     }
     const gates = gatesRef.current;
     if (gates) {
       gates.querySelectorAll<HTMLElement>("[data-gate]").forEach((g, i) => {
-        const rise = smoothstep(0.3 + i * 0.06, 0.55 + i * 0.06, p);
-        g.style.opacity = rise.toFixed(3);
-        g.style.transform = `perspective(900px) translate3d(0, ${((1 - rise) * 90).toFixed(1)}px, 0) rotateX(${((1 - rise) * 70).toFixed(1)}deg)`;
-        g.style.pointerEvents = rise > 0.6 ? "auto" : "none";
+        const o = smoothstep(0.22 + i * 0.04, 0.38 + i * 0.04, p);
+        g.style.opacity = o.toFixed(3);
+        g.style.transform = `translate3d(0, ${((1 - o) * 40).toFixed(1)}px, 0)`;
+        g.style.pointerEvents = o > 0.6 ? "auto" : "none";
       });
     }
-    if (fogRef.current) fogRef.current.style.opacity = String(1 - smoothstep(0, 0.18, p));
-  }, sectionRef);
+  }, rootRef);
+
+  const band = layout?.phone ? 34 : 54;
 
   return (
-    <section
-      ref={sectionRef}
-      id="fork"
-      aria-labelledby="fork-title"
-      className="relative z-10 h-[230vh] md:h-[260vh]"
-    >
-      <div className="sticky top-0 h-[100svh] overflow-hidden bg-ocean">
-        <div className="absolute inset-0 bg-wavelines opacity-80" />
+    <div ref={rootRef} className="absolute inset-0 z-[15]" aria-labelledby="fork-title" role="region">
+      {/* the video's sea, with the ship painted out */}
+      <img
+        ref={plateRef}
+        src={variant.sea}
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        style={{ opacity: 0 }}
+        draggable={false}
+      />
+      <div
+        ref={shadeRef}
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(90%_70%_at_50%_40%,transparent_20%,color-mix(in_oklch,var(--sea-abyss)_70%,transparent)_100%)]"
+        style={{ opacity: 0 }}
+      />
 
-        {/* water channels */}
+      {layout && (
         <svg
           aria-hidden
-          viewBox="0 0 100 100"
-          preserveAspectRatio="none"
-          className="absolute inset-0 h-full w-full"
+          className="pointer-events-none absolute inset-0"
+          width={layout.W}
+          height={layout.H}
+          viewBox={`0 0 ${layout.W} ${layout.H}`}
         >
           <defs>
-            <linearGradient id="channel-water" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="var(--sea-light)" stopOpacity="0.25" />
-              <stop offset="1" stopColor="var(--sea-light)" stopOpacity="0.55" />
-            </linearGradient>
-            <linearGradient id="channel-chosen" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="var(--haki)" stopOpacity="0.12" />
-              <stop offset="1" stopColor="var(--haki)" stopOpacity="0.34" />
-            </linearGradient>
+            <clipPath id="fork-reveal">
+              <rect ref={revealRef} x={0} y={0} width={layout.W} height={0} />
+            </clipPath>
           </defs>
-          <polygon
-            points={bandPolygon(TRUNK.from, { x: 50, y: 18 }, TRUNK.to, 6, 10, aspect)}
-            fill="url(#channel-water)"
-          />
-          {passages.map((p) => {
-            const ch = CHANNELS[p.id];
-            const chosen = p.id === passage;
-            return (
-              <g key={p.id}>
-                <polygon
-                  points={bandPolygon(TRUNK.to, ch.ctrl, ch.end, 10, p.id === "entrepreneurship" ? 26 : 22, aspect)}
-                  fill={chosen ? "url(#channel-chosen)" : "url(#channel-water)"}
-                  className="transition-all duration-700"
-                />
-                <path
-                  d={channelPath(p.id)}
-                  fill="none"
-                  vectorEffect="non-scaling-stroke"
-                  strokeWidth={chosen ? 2.5 : 1.5}
-                  strokeDasharray="10 38"
-                  className={cn("animate-current", chosen ? "stroke-haki" : "stroke-foam/50")}
-                />
-              </g>
-            );
-          })}
+          <g clipPath="url(#fork-reveal)">
+            <path d={trunkPath(layout)} className="fill-none stroke-foam" strokeOpacity={0.1} strokeWidth={band} strokeLinecap="round" />
+            {passages.map((p) => {
+              const chosen = p.id === passage;
+              return (
+                <g key={p.id}>
+                  <path
+                    d={channelPath(layout, p.id)}
+                    className={cn("fill-none transition-[stroke-opacity] duration-700", chosen ? "stroke-haki" : "stroke-foam")}
+                    strokeOpacity={chosen ? 0.16 : 0.08}
+                    strokeWidth={band}
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d={channelPath(layout, p.id)}
+                    className={cn("animate-current fill-none", chosen ? "stroke-haki" : "stroke-foam")}
+                    strokeOpacity={chosen ? 0.95 : 0.35}
+                    strokeWidth={chosen ? 2.5 : 1.5}
+                    strokeDasharray="10 38"
+                    strokeLinecap="round"
+                  />
+                </g>
+              );
+            })}
+            <path
+              d={trunkPath(layout)}
+              className="animate-current fill-none stroke-haki"
+              strokeOpacity={0.8}
+              strokeWidth={2.5}
+              strokeDasharray="10 38"
+              strokeLinecap="round"
+            />
+          </g>
+          {/* the route the ship sails, and the wake it leaves */}
+          <path ref={routeRef} d={routePath(layout, passage)} fill="none" stroke="none" />
           <path
-            d={`M ${TRUNK.from.x} ${TRUNK.from.y} L ${TRUNK.to.x} ${TRUNK.to.y}`}
-            fill="none"
-            vectorEffect="non-scaling-stroke"
-            strokeWidth={1.5}
-            strokeDasharray="10 38"
-            className="animate-current stroke-foam/50"
+            ref={wakeRef}
+            d={routePath(layout, passage)}
+            className="fill-none stroke-foam"
+            strokeOpacity={0.18}
+            strokeWidth={layout.phone ? 16 : 22}
+            strokeLinecap="round"
+          />
+          <path
+            ref={wakeCoreRef}
+            d={routePath(layout, passage)}
+            className="fill-none stroke-foam"
+            strokeOpacity={0.55}
+            strokeWidth={layout.phone ? 3 : 4}
+            strokeLinecap="round"
           />
         </svg>
+      )}
 
-        {/* fog carried over from the video */}
-        <div
-          ref={fogRef}
-          className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-sea-abyss to-transparent"
-        />
-
-        {/* ship */}
+      {/* the video's own ship */}
+      {layout && (
         <div
           ref={shipRef}
-          className="absolute z-10 w-[clamp(52px,6.2vw,92px)] will-change-transform"
-          style={{ left: "50%", top: "12%", transform: "translate(-50%, -50%)" }}
+          aria-hidden
+          className="pointer-events-none absolute left-0 top-0 origin-center will-change-transform"
+          style={{ width: layout.box.width, height: layout.box.height, opacity: 0 }}
         >
-          <div className="absolute left-1/2 top-[-60%] h-[80%] w-[70%] -translate-x-1/2 rounded-full bg-foam/25 blur-xl" />
-          <img
-            src={shipImg}
-            alt="The crew's ship sailing toward the fork"
-            className="relative w-full drop-shadow-[0_18px_24px_var(--sea-abyss)]"
-            draggable={false}
-          />
+          <img src={SHIP_SPRITE} alt="" className="h-full w-full select-none" draggable={false} />
         </div>
+      )}
 
-        {/* title */}
-        <div
-          ref={titleRef}
-          className="absolute inset-x-4 top-[12%] z-20 rounded-3xl bg-sea-abyss/55 p-5 text-center backdrop-blur-sm md:inset-x-auto md:left-12 md:top-[16%] md:max-w-[34%] md:bg-transparent md:p-0 md:text-left md:backdrop-blur-none lg:left-16"
-          style={{ opacity: 0 }}
+      {/* title */}
+      <div
+        ref={titleRef}
+        className="absolute inset-x-5 top-[11%] z-10 text-center md:inset-x-auto md:left-12 md:top-[15%] md:max-w-[30%] md:text-left lg:left-16"
+        style={{ opacity: 0 }}
+      >
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-haki md:text-sm">
+          <span className="font-jp mr-2 text-sm tracking-normal text-ember md:text-base">分岐点</span>The fork
+        </p>
+        <h2
+          id="fork-title"
+          className="font-display mt-2 text-[clamp(1.9rem,7.6vw,4.6rem)] leading-[0.95] text-moon text-moon-glow md:mt-3"
         >
-          <p className="font-mono text-xs uppercase tracking-[0.4em] text-haki">
-            <span className="font-jp text-base tracking-normal text-ember">分岐点</span> · The fork
-          </p>
-          <h2 id="fork-title" className="font-display mt-3 text-[clamp(2.2rem,5vw,5rem)] leading-[0.9] text-moon text-moon-glow">
-            The Grand Line splits in three.
-          </h2>
-          <p className="mx-auto mt-3 max-w-sm text-sm text-foam/80 md:mx-0 md:text-base">
-            Pick a passage and the ship will follow it. You can always come back to sail the others.
-          </p>
-        </div>
-
-        {/* compass legend */}
-        <div aria-hidden className="absolute right-12 top-[17%] z-20 hidden text-right font-mono text-[11px] uppercase tracking-[0.25em] text-foam/60 md:block lg:right-16">
-          {passages.map((p) => (
-            <p key={p.id} className={cn("mb-2 transition-colors", p.id === passage && "text-haki")}>
-              {p.numeral} · {p.id === "education" ? "West" : p.id === "skills" ? "East" : "South"} · {p.title}
-            </p>
-          ))}
-        </div>
-
-        {/* gates */}
-        <div
-          ref={gatesRef}
-          className="absolute inset-x-0 bottom-[4%] z-20 grid grid-cols-3 items-end gap-2 px-3 md:bottom-[6%] md:gap-8 md:px-12"
-        >
-          {passages.map((p) => (
-            <Gate key={p.id} id={p.id} chosen={p.id === passage} onChoose={onChoose} />
-          ))}
-        </div>
+          The sea splits in three.
+        </h2>
+        <p className="mx-auto mt-2 max-w-xs text-sm text-foam/85 md:mx-0 md:mt-3 md:text-base">
+          Pick a route. The ship follows.
+        </p>
       </div>
-    </section>
+
+      {/* gates */}
+      <div
+        ref={gatesRef}
+        className="absolute inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] z-10 grid grid-cols-3 items-end gap-2 px-3 md:bottom-[5%] md:gap-6 md:px-10 lg:px-16"
+      >
+        {passages.map((p) => (
+          <div
+            key={p.id}
+            ref={(el) => {
+              if (el) anchors.current.set(p.id, el);
+              else anchors.current.delete(p.id);
+            }}
+            className={cn("mx-auto w-full max-w-[19rem]", p.id === "experience" && "md:-translate-y-4")}
+          >
+            <div data-gate style={{ opacity: 0 }} className="will-change-transform">
+              <Gate id={p.id} chosen={p.id === passage} onChoose={onChoose} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
 function Gate({ id, chosen, onChoose }: { id: PassageId; chosen: boolean; onChoose: (id: PassageId) => void }) {
   const p = passages.find((x) => x.id === id)!;
-  const tilt = useTilt<HTMLButtonElement>(12);
-  const centre = id === "entrepreneurship";
   return (
-    <div data-gate style={{ opacity: 0 }} className="origin-bottom will-change-transform">
-      <div className={cn(centre && "md:-translate-y-6")}>
-      <button
-        ref={tilt.ref}
-        type="button"
-        onPointerMove={tilt.onPointerMove}
-        onPointerLeave={tilt.onPointerLeave}
-        onClick={() => onChoose(id)}
-        aria-pressed={chosen}
-        className={cn(
-          "group relative w-full overflow-hidden rounded-2xl border bg-sea-abyss/75 p-3 text-left backdrop-blur-md transition-[box-shadow,border-color,background-color] duration-300 md:rounded-3xl md:p-6",
-          "hover:bg-sea-deep/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          chosen ? "border-haki/70 shadow-haki" : "border-foam/15 hover:border-foam/40",
-        )}
-        style={{ transition: "transform 0.25s ease-out, box-shadow 0.3s, border-color 0.3s" }}
-      >
-        <span
-          aria-hidden
-          className="font-jp pointer-events-none absolute -right-2 -top-4 text-[4.5rem] leading-none text-foam/[0.06] md:-right-3 md:-top-6 md:text-[9rem]"
-        >
-          {p.kanji}
-        </span>
-        <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.3em] text-haki md:text-xs">
-          Route {p.numeral}
-          {centre && <span className="hidden rounded-full bg-haki/15 px-2 py-0.5 text-[9px] md:inline">Centre</span>}
-        </span>
-        <span className="font-display mt-1 block text-xl leading-tight text-moon md:mt-2 md:text-4xl">
-          <span className="md:hidden">{p.short}</span>
-          <span className="hidden md:inline">{p.title}</span>
-        </span>
-        <span className="mt-2 hidden text-sm leading-snug text-foam/75 md:block">{p.gateLine}</span>
-        <span className="mt-3 flex items-center justify-between gap-2 font-mono text-[10px] uppercase tracking-wider text-foam/70 md:mt-5 md:text-xs">
-          <span className="hidden md:inline">{passageStats(id)}</span>
-          <span className={cn("transition-transform group-hover:translate-x-1", chosen ? "text-haki" : "text-foam")}>
-            {chosen ? "Sailing ↓" : "Sail →"}
+    <button
+      type="button"
+      onClick={() => onChoose(id)}
+      aria-pressed={chosen}
+      className={cn(
+        "group relative block w-full rounded-[6px] bg-parchment px-2.5 pb-2.5 pt-3 text-left text-ink shadow-paper transition-transform duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-haki md:px-5 md:pb-4 md:pt-5",
+        chosen ? "ring-2 ring-haki" : "",
+      )}
+    >
+      {/* grommet where the channel meets the tag */}
+      <span aria-hidden className="absolute left-1/2 top-1.5 h-2 w-2 -translate-x-1/2 rounded-full border border-ink/40 bg-sea-deep md:top-2 md:h-2.5 md:w-2.5" />
+      <span className="flex items-center justify-between gap-1">
+        <span className="font-display text-sm text-ember md:text-lg">{p.numeral}</span>
+        {chosen && (
+          <span className="rounded-sm border border-ember/70 px-1 text-[9px] font-bold uppercase tracking-wider text-ember md:px-1.5 md:text-[11px]">
+            On course
           </span>
-        </span>
-      </button>
-      </div>
-    </div>
+        )}
+      </span>
+      <span className="font-display mt-0.5 block text-[clamp(0.95rem,4.1vw,2.1rem)] leading-[1.05]">{p.short}</span>
+      <span className="mt-1.5 hidden text-sm leading-snug text-ink/75 md:block">{p.gateLine}</span>
+      <span className="mt-1.5 block text-[11px] font-semibold text-ink/80 md:mt-3 md:text-sm">
+        {chosen ? "Sailing ↓" : "Set course →"}
+      </span>
+    </button>
   );
 }

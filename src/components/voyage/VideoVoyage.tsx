@@ -1,17 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 
-import desktopVideo from "@/assets/grand-line-voyage-720p.mp4.asset.json";
-import mobileVideo from "@/assets/grand-line-voyage-480p.mp4.asset.json";
-import posterFirst from "@/assets/voyage-poster-first.jpg.asset.json";
+import type { PassageId } from "@/data/portfolio";
 import { profile } from "@/data/portfolio";
 import { stickyProgress, useFrameLoop } from "@/hooks/use-frame-loop";
-import { lerp, smoothstep, windowOpacity } from "@/lib/voyage";
+import { clamp, lerp, smoothstep, windowOpacity } from "@/lib/voyage";
 import { cn } from "@/lib/utils";
 
+import { ForkScene } from "./ForkScene";
+import { RichText } from "./RichText";
+import { ScrubVideo, type ScrubHandle, type ScrubLoad } from "./ScrubVideo";
+import { pickVariant, type VoyageVariant } from "./voyage-media";
+
 /**
- * The opening voyage: the real video, scrubbed frame by frame by the scroll position.
- * The file is downloaded once into memory so seeking is instant in every direction.
+ * The opening voyage: one pinned stage. The real video is scrubbed by scroll, then the
+ * fork takes over on top of the video's last frame, with the same ship and the same sea.
  */
+
+/** Share of the stage's scroll spent on the video; the rest is the fork. */
+const VIDEO_SHARE = 0.72;
+/** The video reaches its last frame slightly before the fork begins. */
+const VIDEO_END_AT = 0.96;
 
 interface Chapter {
   id: string;
@@ -25,137 +33,72 @@ const CHAPTERS: Chapter[] = [
   { id: "founder", start: 0.15, end: 0.29, align: "left" },
   { id: "iims", start: 0.33, end: 0.47, align: "right" },
   { id: "crew", start: 0.52, end: 0.69, align: "left" },
-  { id: "sail", start: 0.76, end: 0.94, align: "center" },
+  { id: "sail", start: 0.76, end: 0.92, align: "center" },
 ];
 
-// Kochi (IIMK BMS campus) → Bangalore (IIMB) as the voyage plays.
+// Kochi (IIMK campus) → Bangalore (IIMB) as the voyage plays.
 const FROM = { lat: 9.9312, lon: 76.2673 };
 const TO = { lat: 12.9716, lon: 77.5946 };
 
-type LoadState = { ready: boolean; pct: number; mb: number; streaming: boolean };
-
-export function VideoVoyage() {
+export function VideoVoyage({ passage, onChoose }: { passage: PassageId; onChoose: (id: PassageId) => void }) {
   const sectionRef = useRef<HTMLElement | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const scrubRef = useRef<ScrubHandle | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
+  const vignetteRef = useRef<HTMLDivElement | null>(null);
   const chapterRefs = useRef<(HTMLDivElement | null)[]>([]);
   const barRef = useRef<HTMLDivElement | null>(null);
+  const hudRef = useRef<HTMLDivElement | null>(null);
   const coordRef = useRef<HTMLSpanElement | null>(null);
   const timeRef = useRef<HTMLSpanElement | null>(null);
   const hintRef = useRef<HTMLDivElement | null>(null);
-  const motion = useRef({ smooth: 0, mx: 0, my: 0, tx: 0, ty: 0, lastText: "" });
-  const [load, setLoad] = useState<LoadState>({ ready: false, pct: 0, mb: 0, streaming: false });
+  const forkProgress = useRef(0);
+  const lastText = useRef("");
+  const [variant, setVariant] = useState<VoyageVariant | null>(null);
+  const [load, setLoad] = useState<ScrubLoad>({ ready: false, pct: 0, mb: 0, hd: false });
 
-  // Download the video into memory, with progress.
+  // Pick the framing once we know the screen; switch only if the orientation flips.
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    const small = window.matchMedia("(max-width: 767px)").matches;
-    const src = small ? mobileVideo.url : desktopVideo.url;
-    const expected = small ? mobileVideo.size : desktopVideo.size;
-    const controller = new AbortController();
-    let objectUrl: string | null = null;
-
-    const onReady = () => setLoad((s) => ({ ...s, ready: true, pct: 100 }));
-    video.addEventListener("loadeddata", onReady);
-
-    (async () => {
-      try {
-        const res = await fetch(src, { signal: controller.signal });
-        if (!res.ok || !res.body) throw new Error(`Video request failed (${res.status})`);
-        const total = Number(res.headers.get("content-length")) || expected;
-        const reader = res.body.getReader();
-        const chunks: Uint8Array[] = [];
-        let received = 0;
-        let lastPct = -1;
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          if (value) {
-            chunks.push(value);
-            received += value.length;
-            const pct = Math.min(99, Math.floor((received / total) * 100));
-            if (pct !== lastPct) {
-              lastPct = pct;
-              setLoad((s) => ({ ...s, pct, mb: received / 1_048_576 }));
-            }
-          }
-        }
-        const blob = new Blob(chunks as BlobPart[], { type: "video/mp4" });
-        objectUrl = URL.createObjectURL(blob);
-        video.src = objectUrl;
-        video.load();
-      } catch (err) {
-        if (controller.signal.aborted) return;
-        console.warn("Falling back to streaming the voyage video", err);
-        setLoad((s) => ({ ...s, streaming: true }));
-        video.src = src;
-        video.load();
-      }
-    })();
-
-    return () => {
-      controller.abort();
-      video.removeEventListener("loadeddata", onReady);
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, []);
-
-  // Pointer parallax for the 3D frame.
-  useEffect(() => {
-    const onMove = (e: PointerEvent) => {
-      motion.current.tx = e.clientX / window.innerWidth - 0.5;
-      motion.current.ty = e.clientY / window.innerHeight - 0.5;
-    };
-    window.addEventListener("pointermove", onMove, { passive: true });
-    return () => window.removeEventListener("pointermove", onMove);
+    const choose = () =>
+      setVariant((current) => {
+        const next = pickVariant(window.innerWidth, window.innerHeight);
+        return current?.id === next.id ? current : next;
+      });
+    choose();
+    window.addEventListener("resize", choose);
+    return () => window.removeEventListener("resize", choose);
   }, []);
 
   useFrameLoop(() => {
     const section = sectionRef.current;
     if (!section) return;
     const p = stickyProgress(section);
-    const m = motion.current;
+    const pv = clamp(p / VIDEO_SHARE);
+    forkProgress.current = clamp((p - VIDEO_SHARE) / (1 - VIDEO_SHARE));
 
-    const video = videoRef.current;
-    if (video && video.readyState >= 1 && Number.isFinite(video.duration) && video.duration > 0) {
-      const target = p * (video.duration - 0.06);
-      m.smooth = Math.abs(target - m.smooth) < 0.004 ? target : lerp(m.smooth, target, 0.2);
-      if (!video.seeking && Math.abs(video.currentTime - m.smooth) > 0.01) {
-        video.currentTime = m.smooth;
-      }
-    }
+    scrubRef.current?.update(clamp(pv / VIDEO_END_AT));
 
-    m.mx = lerp(m.mx, m.tx, 0.06);
-    m.my = lerp(m.my, m.ty, 0.06);
-
-    const tiltOut = smoothstep(0.93, 1, p);
+    // Settle to exactly 1:1 framing before the hand-off so the ship lines up.
     const frame = frameRef.current;
-    if (frame) {
-      frame.style.transform = `perspective(1400px) rotateX(${(tiltOut * 32 - m.my * 2.4).toFixed(2)}deg) rotateY(${(m.mx * 3.2).toFixed(2)}deg) scale(${(1.08 - p * 0.05 - tiltOut * 0.12).toFixed(4)}) translateY(${(-tiltOut * 7).toFixed(2)}%)`;
-      frame.style.opacity = String(1 - tiltOut * 0.4);
-    }
+    if (frame) frame.style.transform = `scale(${(1.06 - 0.06 * smoothstep(0, 0.9, pv)).toFixed(4)})`;
+    if (vignetteRef.current) vignetteRef.current.style.opacity = (1 - smoothstep(0.9, 1, pv)).toFixed(3);
 
     CHAPTERS.forEach((c, i) => {
       const el = chapterRefs.current[i];
       if (!el) return;
-      const o = windowOpacity(p, c.start, c.end, 0.03);
+      const o = windowOpacity(pv, c.start, c.end, 0.03);
       el.style.opacity = o.toFixed(3);
-      el.style.transform = `translate3d(0, ${((1 - o) * 28).toFixed(1)}px, 0)`;
-      el.style.filter = o > 0.98 ? "none" : `blur(${((1 - o) * 10).toFixed(1)}px)`;
+      el.style.transform = `translate3d(0, ${((1 - o) * 26).toFixed(1)}px, 0)`;
       el.style.visibility = o < 0.01 ? "hidden" : "visible";
     });
 
-    if (barRef.current) barRef.current.style.transform = `scaleX(${p.toFixed(4)})`;
-    if (hintRef.current) hintRef.current.style.opacity = String(1 - smoothstep(0.005, 0.04, p));
+    if (barRef.current) barRef.current.style.transform = `scaleX(${pv.toFixed(4)})`;
+    if (hudRef.current) hudRef.current.style.opacity = (1 - smoothstep(0.92, 1, pv)).toFixed(3);
+    if (hintRef.current) hintRef.current.style.opacity = String(1 - smoothstep(0.005, 0.04, pv));
 
-    const lat = lerp(FROM.lat, TO.lat, p);
-    const lon = lerp(FROM.lon, TO.lon, p);
-    const secs = p * 40;
-    const text = `${lat.toFixed(2)}°N · ${lon.toFixed(2)}°E`;
-    const time = `00:${String(Math.floor(secs)).padStart(2, "0")}`;
-    if (text + time !== m.lastText) {
-      m.lastText = text + time;
+    const text = `${lerp(FROM.lat, TO.lat, pv).toFixed(2)}°N · ${lerp(FROM.lon, TO.lon, pv).toFixed(2)}°E`;
+    const time = `00:${String(Math.floor(pv * 40)).padStart(2, "0")}`;
+    if (text + time !== lastText.current) {
+      lastText.current = text + time;
       if (coordRef.current) coordRef.current.textContent = text;
       if (timeRef.current) timeRef.current.textContent = time;
     }
@@ -166,42 +109,42 @@ export function VideoVoyage() {
   };
 
   return (
-    <section
-      ref={sectionRef}
-      aria-label="Opening voyage"
-      className="relative z-10 h-[520vh] bg-sea-abyss md:h-[660vh]"
-    >
+    <section ref={sectionRef} aria-label="Opening voyage" className="relative z-10 h-[760svh] bg-sea-abyss md:h-[880vh]">
       <div className="sticky top-0 h-[100svh] w-full overflow-hidden">
-        <div
-          ref={frameRef}
-          className="absolute inset-0 origin-[50%_85%] will-change-transform"
-          style={{ transform: "scale(1.08)" }}
-        >
-          <video
-            ref={videoRef}
-            muted
-            playsInline
-            preload="auto"
-            disablePictureInPicture
-            poster={posterFirst.url}
-            aria-hidden
-            className="h-full w-full object-cover"
-          />
-          {/* cinematic vignette */}
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_85%_at_50%_45%,transparent_45%,var(--sea-abyss)_100%)] opacity-80" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-sea-abyss/90 to-transparent" />
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-sea-abyss/80 to-transparent" />
+        <div ref={frameRef} className="absolute inset-0 will-change-transform" style={{ transform: "scale(1.06)" }}>
+          {variant && <ScrubVideo ref={scrubRef} variant={variant} onLoad={setLoad} />}
+        </div>
+        {/* cinematic vignette over the video only; it fades before the hand-off */}
+        <div ref={vignetteRef} aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute inset-0 bg-[radial-gradient(120%_85%_at_50%_45%,transparent_50%,var(--sea-abyss)_100%)] opacity-70" />
+          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-sea-abyss/85 to-transparent" />
+          <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-sea-abyss/75 to-transparent" />
         </div>
 
+        {variant && <ForkScene passage={passage} onChoose={onChoose} variant={variant} progress={forkProgress} />}
+
         {/* HUD */}
-        <div className="pointer-events-none absolute inset-x-0 top-20 z-20 flex items-start justify-between px-5 font-mono text-[10px] uppercase tracking-[0.25em] text-foam/70 md:px-10 md:text-xs">
+        <div
+          ref={hudRef}
+          className="pointer-events-none absolute inset-x-0 top-[4.5rem] z-20 flex items-start justify-between px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-foam/70 md:top-20 md:px-10 md:text-xs"
+        >
           <div className="flex flex-col gap-1">
             <span className="text-haki">● Log pose locked</span>
-            <span ref={coordRef}>9.93°N · 76.27°E</span>
+            <span ref={coordRef} className="tabular-nums">9.93°N · 76.27°E</span>
           </div>
           <div className="flex flex-col items-end gap-1">
-            <span>Grand Line · Night</span>
-            <span>
+            <span className="flex items-center gap-1.5">
+              Grand Line
+              <span
+                className={cn(
+                  "rounded-sm border px-1 py-px text-[9px] tracking-wider transition-colors duration-700",
+                  load.hd ? "border-haki/70 text-haki" : "border-foam/30 text-foam/50",
+                )}
+              >
+                HD
+              </span>
+            </span>
+            <span className="tabular-nums">
               <span ref={timeRef}>00:00</span> / 00:40
             </span>
           </div>
@@ -209,72 +152,81 @@ export function VideoVoyage() {
 
         {/* Chapters */}
         <div className="absolute inset-0 z-20">
-          <Chapter refFn={setChapterRef(0)} align="center">
-            <p className="font-mono text-xs uppercase tracking-[0.4em] text-haki md:text-sm">
+          <ChapterCard refFn={setChapterRef(0)} align="center">
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-haki md:text-sm">
               Log 01 · <span className="font-jp tracking-normal">航海の始まり</span>
             </p>
-            <h1 className="font-display mt-4 text-[clamp(3.4rem,11vw,10rem)] leading-[0.85] text-moon text-moon-glow">
+            <h1 className="font-display mt-3 text-[clamp(2.7rem,12.5vw,9.5rem)] leading-[0.9] text-moon text-moon-glow md:mt-4">
               {profile.name}
             </h1>
-            <p className="font-jp mt-3 text-lg text-foam/80 md:text-2xl">{profile.nameJp}</p>
-            <p className="mt-6 text-base font-medium text-foam md:text-xl">{profile.tagline}</p>
-          </Chapter>
-
-          <Chapter refFn={setChapterRef(1)} align="left">
-            <Kicker jp="覇気" en="Will" />
-            <h2 className="font-display text-[clamp(2.8rem,7vw,6.5rem)] leading-[0.9] text-moon text-moon-glow">
-              Founder <span className="text-haki text-haki-glow">&</span> CTO.
-            </h2>
-            <p className="mt-5 max-w-md text-base leading-relaxed text-foam/90 md:text-lg">
-              Building <strong className="text-moon">Open Cupboard</strong>. He owns the technical strategy and delivery,
-              turning business needs into digital solutions for B2B and B2C clients.
+            <p className="font-jp mt-2 text-base text-foam/75 md:mt-3 md:text-2xl">{profile.nameJp}</p>
+            <p className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[clamp(1rem,4.4vw,1.6rem)] font-semibold text-moon md:mt-6">
+              {profile.taglineParts.map((part, i) => (
+                <span key={part} className="flex items-center gap-3">
+                  {i > 0 && <span aria-hidden className="h-1.5 w-1.5 rotate-45 bg-haki" />}
+                  <span className={cn(i === 2 && "text-haki")}>{part}</span>
+                </span>
+              ))}
             </p>
-          </Chapter>
+          </ChapterCard>
 
-          <Chapter refFn={setChapterRef(2)} align="right">
-            <Kicker jp="二刀" en="Two blades" />
-            <h2 className="font-display text-[clamp(2.8rem,7vw,6.5rem)] leading-[0.9] text-moon text-moon-glow">
+          <ChapterCard refFn={setChapterRef(1)} align="left">
+            <Kicker jp="覇気" en="Founder & CTO" />
+            <h2 className="font-display text-[clamp(2.4rem,9vw,6.5rem)] leading-[0.92] text-moon text-moon-glow">
+              ₹0 → ₹1 Lakh.
+              <br />
+              <span className="text-haki text-haki-glow">In 3 weeks.</span>
+            </h2>
+            <p className="mt-4 max-w-md text-base leading-relaxed text-foam/90 md:mt-5 md:text-lg">
+              <RichText text="Bootstrapped Open Cupboard: 3D websites, web apps and automations for brands." linkClassName="text-moon decoration-haki" />
+            </p>
+          </ChapterCard>
+
+          <ChapterCard refFn={setChapterRef(2)} align="right">
+            <Kicker jp="二刀" en="Two blades" right />
+            <h2 className="font-display text-[clamp(2.4rem,9vw,6.5rem)] leading-[0.92] text-moon text-moon-glow">
               Two IIMs.
               <br />
               <span className="text-ember text-ember-glow">One voyage.</span>
             </h2>
-            <ul className="mt-5 space-y-2 text-base text-foam/90 md:text-lg">
+            <ul className="mt-4 space-y-1.5 text-base text-foam/90 md:mt-5 md:text-lg">
               <li>
-                <strong className="text-moon">IIM Kozhikode</strong> · BMS ’29/30, on campus
+                <strong className="text-moon">IIM Kozhikode</strong> · BMS, first batch
               </li>
               <li>
-                <strong className="text-moon">IIM Bangalore</strong> · BBA DBE ’29, online
+                <strong className="text-moon">IIM Bangalore</strong> · BBA DBE
               </li>
             </ul>
-          </Chapter>
+          </ChapterCard>
 
-          <Chapter refFn={setChapterRef(3)} align="left">
-            <Kicker jp="仲間" en="The crew" />
-            <h2 className="font-display text-[clamp(2.6rem,6.4vw,6rem)] leading-[0.9] text-moon text-moon-glow">
-              Every crew needs
-              <br />a builder.
+          <ChapterCard refFn={setChapterRef(3)} align="left">
+            <Kicker jp="仲間" en="Captain" />
+            <h2 className="font-display text-[clamp(2.3rem,8.4vw,6rem)] leading-[0.92] text-moon text-moon-glow">
+              Leads crews.
+              <br />
+              Ships products.
             </h2>
-            <div className="mt-6 flex flex-wrap gap-2">
-              {["Product Management", "Web Development", "Digital Growth"].map((s) => (
-                <span
+            <ul className="mt-5 flex flex-wrap gap-2">
+              {["12-member team", "43K → 370K+ subs", "5.8K → 37K+ learners"].map((s) => (
+                <li
                   key={s}
-                  className="rounded-full border border-haki/40 bg-sea-abyss/60 px-4 py-1.5 font-mono text-xs uppercase tracking-wider text-haki backdrop-blur-md"
+                  className="rounded-sm border border-haki/50 bg-sea-abyss/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-haki md:text-sm"
                 >
                   {s}
-                </span>
+                </li>
               ))}
-            </div>
-          </Chapter>
+            </ul>
+          </ChapterCard>
 
-          <Chapter refFn={setChapterRef(4)} align="center">
+          <ChapterCard refFn={setChapterRef(4)} align="center">
             <Kicker jp="出航" en="Set sail" center />
-            <h2 className="font-display text-[clamp(3rem,8vw,7.5rem)] leading-[0.9] text-moon text-moon-glow">
-              The sea splits ahead.
+            <h2 className="font-display text-[clamp(2.4rem,9vw,7rem)] leading-[0.92] text-moon text-moon-glow">
+              Three routes ahead.
             </h2>
-            <p className="mx-auto mt-5 max-w-lg text-base text-foam/90 md:text-lg">
-              Three passages are waiting. Keep scrolling and choose your course.
+            <p className="mx-auto mt-4 max-w-md text-base text-foam/90 md:mt-5 md:text-lg">
+              Keep scrolling. The sea is about to split.
             </p>
-          </Chapter>
+          </ChapterCard>
         </div>
 
         {/* Scroll hint */}
@@ -282,40 +234,33 @@ export function VideoVoyage() {
           ref={hintRef}
           className="pointer-events-none absolute inset-x-0 bottom-12 z-20 flex flex-col items-center gap-3 text-foam/80 md:bottom-16"
         >
-          <span className="font-mono text-[11px] uppercase tracking-[0.35em]">Scroll to set sail</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.3em]">Scroll to set sail</span>
           <span className="relative h-10 w-6 rounded-full border border-foam/50">
             <span className="absolute left-1/2 top-2 h-2 w-1 -translate-x-1/2 animate-bounce rounded-full bg-haki" />
           </span>
         </div>
 
         {/* Timeline */}
-        <div className="absolute inset-x-5 bottom-6 z-20 md:inset-x-10">
+        <div className="pointer-events-none absolute inset-x-4 bottom-5 z-20 md:inset-x-10">
           <div className="relative h-px w-full bg-foam/20">
-            <div ref={barRef} className="absolute inset-0 origin-left scale-x-0 bg-haki shadow-haki" />
-            {CHAPTERS.slice(1).map((c) => (
-              <span
-                key={c.id}
-                className="absolute top-1/2 h-2 w-px -translate-y-1/2 bg-foam/50"
-                style={{ left: `${c.start * 100}%` }}
-              />
-            ))}
+            <div ref={barRef} className="absolute inset-0 origin-left scale-x-0 bg-haki" />
           </div>
         </div>
 
-        {/* Loader */}
+        {/* Loader: waits only for the quick version; HD fades in later */}
         <div
           role="status"
           aria-live="polite"
           className={cn(
-            "absolute inset-0 z-30 flex flex-col items-center justify-center gap-6 bg-sea-abyss/85 backdrop-blur-sm transition-opacity duration-700",
+            "absolute inset-0 z-30 flex flex-col items-center justify-center gap-6 bg-sea-abyss transition-opacity duration-700",
             load.ready ? "pointer-events-none opacity-0" : "opacity-100",
           )}
         >
           <Compass />
-          <div className="text-center">
+          <div className="px-6 text-center">
             <p className="font-display text-3xl text-moon md:text-4xl">Charting the Grand Line</p>
-            <p className="mt-2 font-mono text-xs uppercase tracking-[0.3em] text-foam/70">
-              {load.streaming ? "Streaming the voyage…" : `${load.pct}% · ${load.mb.toFixed(1)} MB`}
+            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.25em] text-foam/70 tabular-nums">
+              {load.pct}% · {load.mb.toFixed(1)} MB
             </p>
           </div>
           <div className="h-px w-56 overflow-hidden bg-foam/15">
@@ -327,7 +272,7 @@ export function VideoVoyage() {
   );
 }
 
-function Chapter({
+function ChapterCard({
   refFn,
   align,
   children,
@@ -340,24 +285,18 @@ function Chapter({
     <div
       ref={refFn}
       className={cn(
-        "absolute inset-0 flex px-5 pb-36 will-change-[opacity,transform] md:px-16",
-        align === "center" && "items-end justify-center text-center md:items-center md:pb-0",
-        align === "left" && "items-end justify-start md:items-center md:pb-0",
-        align === "right" && "items-end justify-end text-right md:items-center md:pb-0",
+        "absolute inset-0 flex px-5 pb-24 will-change-[opacity,transform] md:px-16 md:pb-0",
+        align === "center" && "items-end justify-center text-center md:items-center",
+        align === "left" && "items-end justify-start md:items-center",
+        align === "right" && "items-end justify-end text-right md:items-center",
       )}
       style={{ opacity: 0, visibility: "hidden" }}
     >
-      <div
-        className={cn(
-          "relative max-w-3xl",
-          align !== "center" &&
-            "rounded-3xl bg-gradient-to-br from-sea-abyss/70 to-sea-abyss/20 p-6 backdrop-blur-[2px] md:bg-none md:p-0 md:backdrop-blur-none",
-        )}
-      >
+      <div className="relative w-full max-w-3xl md:w-auto">
         {/* soft shadow pool so text stays legible on bright frames */}
         <div
           aria-hidden
-          className="pointer-events-none absolute -inset-x-24 -inset-y-20 -z-10 hidden bg-[radial-gradient(closest-side,color-mix(in_oklch,var(--sea-abyss)_78%,transparent),transparent)] md:block"
+          className="pointer-events-none absolute -inset-x-16 -inset-y-14 -z-10 bg-[radial-gradient(closest-side,color-mix(in_oklch,var(--sea-abyss)_80%,transparent),transparent)] md:-inset-x-24 md:-inset-y-20"
         />
         {children}
       </div>
@@ -365,15 +304,16 @@ function Chapter({
   );
 }
 
-function Kicker({ jp, en, center = false }: { jp: string; en: string; center?: boolean }) {
+function Kicker({ jp, en, center = false, right = false }: { jp: string; en: string; center?: boolean; right?: boolean }) {
   return (
     <p
       className={cn(
-        "mb-4 flex items-center gap-3 font-mono text-xs uppercase tracking-[0.35em] text-haki md:text-sm",
+        "mb-3 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.3em] text-haki md:mb-4 md:text-sm",
         center && "justify-center",
+        right && "justify-end",
       )}
     >
-      <span className="font-jp text-xl tracking-normal text-ember md:text-2xl">{jp}</span>
+      <span className="font-jp text-lg tracking-normal text-ember md:text-2xl">{jp}</span>
       <span className="h-px w-8 bg-haki/60" />
       {en}
     </p>
@@ -384,7 +324,7 @@ function Compass() {
   return (
     <div className="relative h-24 w-24">
       <div className="absolute inset-0 rounded-full border border-foam/30" />
-      <div className="absolute inset-2 rounded-full border border-dashed border-haki/40 animate-spin-slow" />
+      <div className="absolute inset-2 animate-spin-slow rounded-full border border-dashed border-haki/40" />
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="h-16 w-1.5 animate-[spin_2.4s_cubic-bezier(.6,0,.4,1)_infinite]">
           <div className="h-1/2 w-full rounded-t-full bg-ember" />
@@ -395,4 +335,3 @@ function Compass() {
     </div>
   );
 }
-

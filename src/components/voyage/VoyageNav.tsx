@@ -1,9 +1,10 @@
 import { Compass } from "lucide-react";
 import { useEffect, useRef } from "react";
 
-import shipImg from "@/assets/ship-sunny.webp";
 import { passages, type PassageId } from "@/data/portfolio";
 import { cn } from "@/lib/utils";
+
+import { SHIP_SPRITE } from "./voyage-media";
 
 /** The log pose: fixed header with voyage progress and passage shortcuts. */
 export function VoyageNav({ passage, onChoose }: { passage: PassageId; onChoose: (id: PassageId) => void }) {
@@ -37,18 +38,18 @@ export function VoyageNav({ passage, onChoose }: { passage: PassageId; onChoose:
       <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-3 px-4 py-3 md:px-8 md:py-4">
         <a
           href="#top"
-          className="group flex items-center gap-2 rounded-full border border-foam/15 bg-sea-abyss/60 py-1.5 pl-1.5 pr-4 backdrop-blur-md transition-colors hover:border-haki/50"
+          className="group flex min-w-0 items-center gap-2 rounded-full border border-foam/15 bg-sea-abyss/70 py-1.5 pl-1.5 pr-3.5 backdrop-blur-md transition-colors hover:border-haki/50 sm:pr-4"
         >
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-haki text-primary-foreground">
             <Compass className="h-4 w-4 transition-transform duration-700 group-hover:rotate-180" />
           </span>
-          <span className="font-display text-xl leading-none text-moon">
+          <span className="font-display truncate text-lg leading-none text-moon sm:text-xl">
             <span className="sm:hidden">A. Nagaria</span>
             <span className="hidden sm:inline">Aishwary Nagaria</span>
           </span>
         </a>
 
-        <nav aria-label="Passages" className="flex items-center gap-1 rounded-full border border-foam/15 bg-sea-abyss/60 p-1 backdrop-blur-md">
+        <nav aria-label="Passages" className="flex shrink-0 items-center gap-0.5 rounded-full border border-foam/15 bg-sea-abyss/70 p-1 backdrop-blur-md sm:gap-1">
           {passages.map((p) => (
             <button
               key={p.id}
@@ -56,8 +57,9 @@ export function VoyageNav({ passage, onChoose }: { passage: PassageId; onChoose:
               onClick={() => onChoose(p.id)}
               aria-current={p.id === passage ? "true" : undefined}
               title={p.title}
+              aria-label={p.title}
               className={cn(
-                "flex h-8 items-center gap-1.5 rounded-full px-3 font-mono text-[11px] uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-3",
                 p.id === passage ? "bg-haki text-primary-foreground" : "text-foam/80 hover:bg-foam/10 hover:text-moon",
               )}
             >
@@ -67,7 +69,8 @@ export function VoyageNav({ passage, onChoose }: { passage: PassageId; onChoose:
           ))}
           <a
             href="#contact"
-            className="flex h-8 items-center rounded-full px-3 font-mono text-[11px] uppercase tracking-wider text-foam/80 transition-colors hover:bg-foam/10 hover:text-moon"
+            aria-label="Contact"
+            className="flex h-8 items-center rounded-full px-2.5 text-[11px] font-bold uppercase tracking-wider text-foam/80 transition-colors hover:bg-foam/10 hover:text-moon sm:px-3"
           >
             <span className="hidden sm:inline">Contact</span>
             <span className="font-jp text-sm sm:hidden">港</span>
@@ -79,7 +82,7 @@ export function VoyageNav({ passage, onChoose }: { passage: PassageId; onChoose:
         <div ref={barRef} className="absolute inset-0 origin-left scale-x-0 bg-gradient-to-r from-haki/40 to-haki" />
         <img
           ref={markerRef}
-          src={shipImg}
+          src={SHIP_SPRITE}
           alt=""
           aria-hidden
           className="absolute top-1/2 w-3 -translate-x-1/2 -translate-y-1/2 -rotate-90"

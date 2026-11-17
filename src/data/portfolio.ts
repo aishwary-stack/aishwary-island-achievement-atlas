@@ -1,9 +1,12 @@
 /**
- * Every word on the voyage lives here. Facts come from Aishwary's public LinkedIn
- * headline/experience, his Reflections.live author page and the official program sites.
+ * Every word on the voyage lives here. Facts come from Aishwary's LinkedIn
+ * (experience + skills), his IIMK journey post and the official program sites.
  */
+import festivePhoto from "@/assets/aishwary-festive.jpg.asset.json";
+import hillsPhoto from "@/assets/aishwary-hills.jpg.asset.json";
+import wantedPhoto from "@/assets/aishwary-wanted.jpg.asset.json";
 
-export type PassageId = "education" | "entrepreneurship" | "skills";
+export type PassageId = "education" | "experience" | "skills";
 
 export type IslandArt =
   | "iimk"
@@ -13,21 +16,33 @@ export type IslandArt =
   | "opencupboard"
   | "ecell"
   | "marketing"
-  | "writing";
+  | "edtech"
+  | "anarts";
+
+export interface IslandStat {
+  value: string;
+  label: string;
+}
 
 export interface Island {
   id: string;
   art: IslandArt;
-  /** Four-digit year shown on the island's flag. */
+  /** Four-digit year shown on the island's stamp. */
   year: string;
   /** Longer human period, e.g. "Sep 2026 — Present". */
   period: string;
   title: string;
   org: string;
+  /** Website for the organisation; the org name links here wherever it appears. */
+  orgUrl?: string;
   role: string;
   location?: string;
-  /** One-liner shown on the map. */
+  /** The punchy one-liner on the map card. */
+  headline: string;
+  /** One short supporting sentence under the headline. */
   brief: string;
+  /** Up to three big numbers. */
+  stats?: IslandStat[];
   /** Paragraphs shown in the opened logbook. */
   story: string[];
   highlights: string[];
@@ -45,7 +60,6 @@ export interface Passage {
   id: PassageId;
   numeral: "I" | "II" | "III";
   kanji: string;
-  kanjiMeaning: string;
   title: string;
   /** Compact label for small screens and the top bar. */
   short: string;
@@ -61,13 +75,13 @@ export interface SkillGroup {
   skills: string[];
 }
 
+export const OPEN_CUPBOARD_URL = "https://opencupboard.in";
+
 export const profile = {
   name: "Aishwary Nagaria",
   nameJp: "アイシュワリー・ナガリア",
-  headline:
-    "IIM Kozhikode BMS ’29/30 · IIM Bangalore BBA DBE ’29 · Founder & CTO, Open Cupboard",
-  tagline: "Founder · Builder · Dual-IIM scholar",
-  focus: ["Product Management", "Web Development", "Entrepreneurship"],
+  tagline: "Founder · Developer · Dual-IIM Scholar",
+  taglineParts: ["Founder", "Developer", "Dual-IIM Scholar"],
 } as const;
 
 export const contact = {
@@ -77,10 +91,17 @@ export const contact = {
     url: "https://www.instagram.com/aishwarynagaria/",
   },
   linkedin: {
-    handle: "in/aishwary-nagaria-7a9a24370",
+    handle: "Aishwary Nagaria",
     url: "https://www.linkedin.com/in/aishwary-nagaria-7a9a24370/",
   },
 } as const;
+
+/** Names that always become links, wherever they appear in the copy. */
+export const autoLinks: { text: string; href: string }[] = [
+  { text: "opencupboard.in", href: OPEN_CUPBOARD_URL },
+  { text: "Open Cupboard", href: OPEN_CUPBOARD_URL },
+  { text: "OpenCupboard", href: OPEN_CUPBOARD_URL },
+];
 
 /** Left → centre → right, exactly as the sea splits at the fork. */
 export const passages: Passage[] = [
@@ -88,43 +109,37 @@ export const passages: Passage[] = [
     id: "education",
     numeral: "I",
     kanji: "学",
-    kanjiMeaning: "learning",
-    title: "Education & Academics",
+    title: "Education",
     short: "Education",
     routeName: "The Scholar’s Current",
-    gateLine: "Two IIMs at once, McKinsey Forward and a ticket toward Hiroshima.",
-    blurb:
-      "A double voyage: IIM Kozhikode on campus and IIM Bangalore online, sailed side by side — with global programs charted along the way.",
+    gateLine: "Two IIMs at once. McKinsey.org. Hiroshima.",
+    blurb: "Two IIMs at the same time, plus global programs on the side.",
   },
   {
-    id: "entrepreneurship",
+    id: "experience",
     numeral: "II",
-    kanji: "創",
-    kanjiMeaning: "to create",
-    title: "Entrepreneurship",
-    short: "Ventures",
-    routeName: "The Founder’s Grand Line",
-    gateLine: "Founder & CTO at Open Cupboard, E-Cell founder’s club, campaigns and a published pen.",
-    blurb:
-      "The centre channel — the widest and the wildest. Every island is something built, launched or written from scratch.",
+    kanji: "航",
+    title: "Experience",
+    short: "Experience",
+    routeName: "The Builder’s Grand Line",
+    gateLine: "From a lockdown art shop to ₹1 Lakh in 3 weeks.",
+    blurb: "Five islands, five crews. Each one built, scaled or launched from zero.",
   },
   {
     id: "skills",
     numeral: "III",
     kanji: "技",
-    kanjiMeaning: "technique",
     title: "Skills",
     short: "Skills",
     routeName: "The Skill Falls",
-    gateLine: "Too many to sail past — so the ship drops straight down the waterfall.",
-    blurb:
-      "The sea runs out and the falls begin. Every ledge on the way down is a skill picked up on the voyage.",
+    gateLine: "Too many to sail past, so the ship drops down the falls.",
+    blurb: "The sea runs out and the falls begin. Every ledge is a set of skills from the voyage.",
   },
 ];
 
 export const educationRows: IslandRow[] = [
   {
-    strait: "Dual-degree strait · sailing both at once",
+    strait: "Both at once",
     islands: [
       {
         id: "iim-kozhikode",
@@ -133,16 +148,17 @@ export const educationRows: IslandRow[] = [
         period: "2026 — 2030",
         title: "IIM Kozhikode",
         org: "Indian Institute of Management Kozhikode",
-        role: "Bachelor of Management Studies (Honours with Research)",
-        location: "Kochi Campus, Kerala",
-        brief: "Part of the first-ever BMS batch, IIMK’s first full-time undergraduate degree.",
+        role: "BMS (Honours with Research)",
+        location: "Kochi campus",
+        headline: "First-ever BMS batch.",
+        brief: "IIMK’s first full-time undergraduate degree, on campus.",
         story: [
-          "It started as a small dream in Class 12: to get into an “IIM”. With very little guidance, Aishwary took the first step anyway and figured out the path on the way.",
-          "Preparing for the entrance turned him from a “CBSE-rooted learner” into an “aptitude-based learner”: late-night prep marathons that ran till 5 AM, several mocks and sectionals in a single day, and a lot of discipline. Then he got to say it: “I am joining the Indian Institute of Management, Kozhikode.”",
-          "The BMS (Honours with Research) is a four-year programme on IIMK’s Kochi campus. It pairs a Major in Management with stackable Minors such as Economics & Public Policy, AI & ML, Psychology and Finance & Big Data, along with exchange semesters, research and internships.",
+          "It started as a small dream in Class 12: get into an IIM. With very little guidance, Aishwary took the first step anyway and figured out the path on the way.",
+          "Prep turned him from a rote learner into an aptitude learner: prep marathons till 5 AM, several mocks a day and a lot of discipline. Then he got to say it: “I am joining the Indian Institute of Management, Kozhikode.”",
+          "The BMS (Honours with Research) is a four-year programme on IIMK’s Kochi campus. It pairs a Major in Management with Minors such as Economics & Public Policy, AI & ML, Psychology and Finance & Big Data, plus exchange semesters, research and internships.",
         ],
         highlights: [
-          "Inaugural batch of IIMK’s first full-time UG programme (2026–27 start)",
+          "Inaugural batch of IIMK’s first full-time UG programme",
           "Major in Management with interdisciplinary Minors",
           "Member, BMS Founder’s Club (E-Cell)",
         ],
@@ -159,17 +175,18 @@ export const educationRows: IslandRow[] = [
         period: "2026 — 2029",
         title: "IIM Bangalore",
         org: "Indian Institute of Management Bangalore",
-        role: "BBA in Digital Business & Entrepreneurship (DBE)",
-        location: "Online · alongside IIMK",
-        brief: "IIMB’s three-year, digital-first BBA in Digital Business & Entrepreneurship.",
+        role: "BBA, Digital Business & Entrepreneurship",
+        location: "Online",
+        headline: "A second IIM. Same time.",
+        brief: "IIMB’s digital-first BBA, sailed alongside IIMK.",
         story: [
           "While on campus at IIM Kozhikode, Aishwary also studies at IIM Bangalore. Two IIMs, two degrees, one voyage.",
-          "The BBA (DBE) is a three-year, future-ready programme that mixes academics with real-world projects, mentorship and digital-first learning. It is built for people who want to launch ventures or change how organisations work, which suits a founder.",
+          "The BBA (DBE) is a three-year, digital-first programme that mixes academics with real projects and mentorship. It is built for people who want to launch ventures, which suits a founder.",
         ],
         highlights: [
           "Double-degree journey with IIM Kozhikode",
-          "Curriculum blends business fundamentals with digital innovation",
-          "Venture-building, mentorship and real-world projects",
+          "Business fundamentals + digital innovation",
+          "Venture building, mentorship and real projects",
         ],
         tags: ["BBA DBE ’29", "Online", "Entrepreneurship"],
         link: { label: "About the BBA DBE programme", href: "https://dbe.iimb.ac.in/" },
@@ -186,11 +203,12 @@ export const educationRows: IslandRow[] = [
         title: "McKinsey.org Forward",
         org: "McKinsey.org",
         role: "Forward Program Learner",
-        location: "Global · online",
-        brief: "Enrolled in McKinsey’s global program on workplace-ready skills.",
+        location: "Global, online",
+        headline: "Enrolled in McKinsey.org Forward.",
+        brief: "Workplace-ready skills with a cohort from 130+ countries.",
         story: [
-          "Forward is McKinsey.org’s free, multi-week learning program for career starters and job changers, offered in more than 130 countries.",
-          "It covers essential workplace skills that carry across industries and roles, and graduates go on to the Forward network for more learning, events and alumni connections.",
+          "Forward is McKinsey.org’s free, multi-week learning program for early-career talent, offered in more than 130 countries.",
+          "It trains the workplace skills that carry across industries: problem solving, communication, digital tools and adaptability. Graduates join the Forward alumni network.",
         ],
         highlights: [
           "Practical, transferable workplace skills",
@@ -212,19 +230,20 @@ export const educationRows: IslandRow[] = [
         art: "hiroshima",
         year: "2026",
         period: "2026 · Round 1 cleared",
-        title: "Hiroshima University · AGILE COIL",
+        title: "Hiroshima University",
         org: "Hiroshima University, Japan",
-        role: "Selected · 1st round, AGILE COIL",
+        role: "AGILE COIL · Round 1 selected",
         location: "Japan × India × UK × Australia",
-        brief: "Cleared round 1 for Hiroshima University’s AGILE entrepreneurship COIL program.",
+        headline: "Round 1 cleared. Next stop: Japan?",
+        brief: "Selected in the first round of the AGILE entrepreneurship program.",
         story: [
-          "AGILE (Agile Entrepreneurship Development Program through International Collaborative Learning) is Hiroshima University’s international program for training globally minded, peace-driven future professionals.",
-          "Phase 1 is COIL (Collaborative Online International Learning). Multicultural student teams from Hiroshima University, the University of Sheffield, BITS Pilani, IIM Bangalore and UNSW work together on carbon neutrality, the SDGs and disaster prevention. Later phases move to face-to-face exchanges, a semester abroad and internships.",
+          "AGILE (Agile Entrepreneurship Development Program through International Collaborative Learning) is Hiroshima University’s international program for globally minded future founders.",
+          "Phase 1 is COIL (Collaborative Online International Learning). Mixed teams from Hiroshima University, the University of Sheffield, BITS Pilani, IIM Bangalore and UNSW work on carbon neutrality, the SDGs and disaster prevention. Later phases move to face-to-face exchanges, a semester abroad and internships.",
         ],
         highlights: [
           "Cleared the first selection round",
           "Five partner universities across four countries",
-          "Builds cross-cultural, agile entrepreneurship",
+          "Cross-cultural, agile entrepreneurship",
         ],
         tags: ["Hiroshima University", "COIL", "International"],
         link: {
@@ -236,56 +255,101 @@ export const educationRows: IslandRow[] = [
   },
 ];
 
-export const entrepreneurshipRows: IslandRow[] = [
+/** Oldest first: the voyage starts at the art shop and ends at Open Cupboard. */
+export const experienceRows: IslandRow[] = [
   {
     islands: [
       {
-        id: "reflections-writer",
-        art: "writing",
-        year: "2025",
-        period: "Jul 2025",
-        title: "Published Writer",
-        org: "Reflections.live",
-        role: "Author · Opinion",
-        brief: "Wrote “The Strategic Narcissist: Why Knowing Your Worth Isn’t Arrogance — It’s Armour”.",
+        id: "an-arts",
+        art: "anarts",
+        year: "2020",
+        period: "Mar 2020 — Mar 2021",
+        title: "A N Arts",
+        org: "A N Arts",
+        role: "Founder",
+        location: "Self-employed",
+        headline: "Lockdown sketches → first paying customers.",
+        brief: "~30 original sketches and handmade pieces, sold direct.",
+        stats: [
+          { value: "₹17.4K", label: "in sales (est.)" },
+          { value: "30", label: "pieces sold" },
+          { value: "₹900", label: "top price" },
+        ],
         story: [
-          "On Reflections.live Aishwary writes about human behaviour, self-growth and the hidden layers of everyday life. He tries to make complex ideas simple and offer a new angle on them.",
-          "His opinion piece “The Strategic Narcissist” argues that adaptive self-belief isn’t vanity but value preservation. He calls it an emotional firewall that lets you take risks, lead, build, and recover from failure.",
+          "A N Arts began during the COVID lockdown. Sketching for fun turned into Aishwary’s first business.",
+          "He made and sold about 24 sketches at ₹300–500 each and 6 handcrafted pieces, like decorative boxes and pen holders, at ₹700–900. He made them, priced them and sold them himself, straight to schoolmates.",
+          "Estimated sales: ₹11,400–₹17,400. The lesson stuck: a hobby becomes a business the moment someone pays for it.",
         ],
         highlights: [
-          "Published opinion essay, 30 July 2025",
-          "Draws on Twenge & Campbell, Robert Greene, Cal Newport and Bruce Hood",
-          "A founder’s mindset, put into words",
+          "~30 original sketches and handcrafted products sold",
+          "Estimated ₹11.4K–₹17.4K in sales",
+          "Owned product, pricing and direct sales end to end",
         ],
-        tags: ["Writing", "Psychology", "Opinion"],
-        link: {
-          label: "Read the article",
-          href: "https://reflections.live/articles/24250/the-strategic-narcissist-why-knowing-your-worth-isnt-arrogance-its-armor-article-by-aishwary-nagaria-23757-mdq7apay.html",
-        },
+        tags: ["Product Development", "Direct Sales", "Customer Acquisition"],
       },
     ],
   },
   {
     islands: [
       {
-        id: "digital-marketing",
-        art: "marketing",
-        year: "2025",
-        period: "Before IIM",
-        title: "Digital Marketing",
-        org: "Digital campaigns",
-        role: "Digital Marketing",
-        brief: "Executed digital campaigns end to end, contributing to ₹12.5K in results.",
+        id: "munil-sir-classes",
+        art: "edtech",
+        year: "2024",
+        period: "Jun 2024 — Mar 2025",
+        title: "Munil Sir Classes",
+        org: "Munil Sir Classes",
+        role: "Product Manager · Product Head",
+        location: "New Delhi · Remote",
+        headline: "43K → 370K+ subscribers.",
+        brief: "Launched the first app and led a 12-member team as Product Head.",
+        stats: [
+          { value: "370K+", label: "YouTube subs" },
+          { value: "37K+", label: "paid learners" },
+          { value: "12", label: "person team" },
+        ],
         story: [
-          "Before campus life began, Aishwary was already running real digital campaigns, where results are counted in numbers, not likes.",
-          "Planning, launching and optimising those campaigns gave him a working feel for growth, audiences and conversion, which he now brings to everything Open Cupboard builds.",
+          "Munil Sir taught on YouTube and WhatsApp. Aishwary led the launch of his first educational app and helped turn it into a scalable EdTech platform.",
+          "As Product Head he ran a 12-member cross-functional team across product development, operations, content and execution, and worked directly with the founder to build scalable workflows and professionalise operations.",
+          "During that growth phase the channel went from 43K to 370K+ subscribers, and paid learners grew from 5.8K to 37K+.",
         ],
         highlights: [
-          "Hands-on campaign execution",
-          "Contributed to ₹12.5K in campaign results",
-          "Growth instincts that feed his product work",
+          "Launched the first educational app",
+          "Led a 12-member cross-functional team",
+          "Helped scale 43K → 370K+ subscribers and 5.8K → 37K+ paid learners",
+          "Kept product, marketing and content teams in sync",
         ],
-        tags: ["Growth", "Campaigns", "Marketing"],
+        tags: ["Product Management", "Product Development", "Product Operations"],
+      },
+    ],
+  },
+  {
+    islands: [
+      {
+        id: "muskurahat-foundation",
+        art: "marketing",
+        year: "2025",
+        period: "Jul 2025 — Aug 2025",
+        title: "Muskurahat Foundation",
+        org: "Muskurahat Foundation",
+        role: "Digital Marketing Intern",
+        location: "Remote",
+        headline: "Ran the Instagram for 57.9K+ followers.",
+        brief: "Posts, campaigns and Canva creatives that helped raise ₹12.5K.",
+        stats: [
+          { value: "57.9K+", label: "followers" },
+          { value: "₹12.5K", label: "raised" },
+        ],
+        story: [
+          "At Muskurahat Foundation Aishwary managed the foundation’s Instagram, which has 57.9K+ followers. He planned the content, published the posts and kept the audience engaged.",
+          "He designed promotional creatives, campaign posters and branded material in Canva for awareness and fundraising drives.",
+          "With the marketing team he ran digital campaigns that raised ₹12.5K for the cause and widened the foundation’s reach.",
+        ],
+        highlights: [
+          "Managed a 57.9K+ follower Instagram",
+          "Designed campaign posters and creatives in Canva",
+          "Campaigns contributed ₹12.5K in fundraising",
+        ],
+        tags: ["Digital Marketing Media", "Canva", "Digital Marketing Communications"],
       },
     ],
   },
@@ -299,18 +363,19 @@ export const entrepreneurshipRows: IslandRow[] = [
         title: "BMS Founder’s Club",
         org: "E-Cell, IIM Kozhikode",
         role: "Member",
-        location: "IIM Kozhikode",
-        brief: "Member of the BMS Founder’s Club at IIMK’s Entrepreneurship Cell.",
+        location: "IIM Kozhikode · On-site",
+        headline: "Founders’ crew of IIMK’s first BMS batch.",
+        brief: "Joined the E-Cell’s Founder’s Club in month one on campus.",
         story: [
-          "In his first month at IIM Kozhikode, Aishwary joined the BMS Founder’s Club, the founder community of the inaugural BMS batch under the institute’s Entrepreneurship Cell.",
-          "It is a crew of builders swapping ideas, pressure-testing ventures and turning classroom frameworks into real startups.",
+          "In his first month at IIM Kozhikode, Aishwary joined the BMS Founder’s Club, the founder community of the first BMS batch, under the institute’s Entrepreneurship Cell.",
+          "It is a crew of builders who swap ideas, pressure-test ventures and turn classroom frameworks into real startups.",
         ],
         highlights: [
           "Joined from day one of the BMS programme",
           "Founder-first community at IIMK",
-          "Ideas → ventures, on campus",
+          "Start-up leadership and venture building on campus",
         ],
-        tags: ["E-Cell", "Community", "IIMK"],
+        tags: ["Start-up Leadership", "Start-up Ventures", "Product Operations"],
       },
     ],
   },
@@ -323,71 +388,80 @@ export const entrepreneurshipRows: IslandRow[] = [
         period: "Sep 2026 — Present",
         title: "Open Cupboard",
         org: "Open Cupboard",
+        orgUrl: OPEN_CUPBOARD_URL,
         role: "Founder & CTO",
-        brief: "Founded Open Cupboard. Leads its tech strategy and delivery for B2B and B2C clients.",
+        location: "Kochi · On-site",
+        headline: "₹0 → ₹1 Lakh in 3 weeks.",
+        brief: "Bootstrapped. 3D websites, web apps and automations for B2B and B2C brands.",
+        stats: [
+          { value: "₹1L", label: "revenue" },
+          { value: "3 wks", label: "from ₹0" },
+          { value: "5", label: "person team" },
+        ],
         story: [
-          "Open Cupboard is Aishwary’s flagship: a venture he founded and runs as CTO.",
-          "He leads technical strategy and end-to-end delivery, turning business requirements into working digital solutions for both B2B and B2C clients, from the first idea through to launch.",
+          "Open Cupboard builds high-converting 3D websites, custom web apps and automated systems for modern brands. Aishwary founded it and runs it as CTO.",
+          "He bootstrapped it from ₹0 to ₹1 Lakh in revenue in just 3 weeks, delivering for B2B and B2C clients while starting work on its own SaaS products.",
+          "He leads technical strategy and delivery: responsive websites, web apps, custom dashboards, workflow automations, cloud backends and API integrations. He designs in Figma, then builds it for real.",
+          "He built and mentors a 5-person team, set up workflows for LinkedIn outreach, Instagram, organic content and the inbound pipeline, and leads client pitches, negotiations and closing.",
         ],
         highlights: [
-          "Founder & CTO",
-          "Owns technical strategy and end-to-end delivery",
-          "Digital solutions for B2B and B2C clients",
+          "₹0 → ₹1 Lakh revenue in 3 weeks, bootstrapped",
+          "Built and mentors a 5-person team",
+          "Figma to production: websites, web apps, dashboards, automations",
+          "Leads pitches, negotiations and deal closing",
+          "Building in-house SaaS products",
         ],
-        tags: ["Founder", "CTO", "Product", "Web"],
-        link: { label: "See it on LinkedIn", href: contact.linkedin.url },
+        tags: ["Full-Stack Development", "SaaS Development", "3D Rendering", "B2B2C"],
+        link: { label: "Visit opencupboard.in", href: OPEN_CUPBOARD_URL },
       },
     ],
   },
 ];
 
+/** LinkedIn skills, grouped, plus Google Sheets. */
 export const skillGroups: SkillGroup[] = [
-  {
-    id: "product",
-    title: "Product & Strategy",
-    kanji: "策",
-    skills: [
-      "Product Management",
-      "Technical Strategy",
-      "Requirements → Digital Solutions",
-      "End-to-End Delivery",
-      "B2B & B2C Solutions",
-    ],
-  },
   {
     id: "build",
     title: "Build & Ship",
     kanji: "築",
-    skills: ["Web Development", "Website Launches", "Tech Leadership (CTO)"],
+    skills: ["Full-Stack Development", "SaaS Development", "3D Rendering", "Web Development"],
   },
   {
-    id: "growth",
-    title: "Growth & Marketing",
-    kanji: "伸",
-    skills: ["Digital Marketing", "Campaign Execution", "Audience Growth"],
-  },
-  {
-    id: "data",
-    title: "Data & Tools",
-    kanji: "算",
-    skills: ["Google Sheets", "Quantitative Aptitude", "Data-backed Decisions"],
+    id: "product",
+    title: "Product",
+    kanji: "策",
+    skills: ["Product Management", "Product Development", "Product Operations"],
   },
   {
     id: "venture",
-    title: "Venture Building",
+    title: "Venture",
     kanji: "起",
-    skills: ["Entrepreneurship", "Startup Ideation", "Founder Mindset"],
+    skills: ["Entrepreneurship", "Start-up Ventures", "Start-up Leadership", "B2B2C"],
   },
   {
-    id: "voice",
-    title: "Voice & Crew",
-    kanji: "声",
-    skills: [
-      "Opinion Writing",
-      "Storytelling",
-      "Cross-cultural Collaboration",
-      "Leadership",
-      "Communication",
-    ],
+    id: "clients",
+    title: "Sales & Clients",
+    kanji: "商",
+    skills: ["Client Relations", "Customer Relationship Management (CRM)", "Direct Sales", "Customer Acquisition"],
+  },
+  {
+    id: "growth",
+    title: "Marketing",
+    kanji: "伸",
+    skills: ["Digital Marketing Media", "Digital Marketing Communications", "Canva"],
+  },
+  {
+    id: "tools",
+    title: "Tools & Ops",
+    kanji: "算",
+    skills: ["Google Sheets", "Microsoft Office", "Executive Calendar Management"],
   },
 ];
+
+export const portraits = {
+  wanted: { src: wantedPhoto.url, alt: "Aishwary Nagaria in sunglasses and a Starry Night shirt" },
+  crew: [
+    { src: hillsPhoto.url, alt: "Aishwary sitting on a hilltop above green valleys", caption: "Off duty. Still scouting." },
+    { src: festivePhoto.url, alt: "Aishwary in a kurta on a festive night by the lake", caption: "Festival nights" },
+  ],
+} as const;
