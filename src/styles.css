@@ -19,7 +19,7 @@
 
 @theme inline {
   --font-sans: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Pirata One", "Bricolage Grotesque", serif;
+  --font-display: "New Rocker", "Bricolage Grotesque", serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
   --font-jp: "Zen Antique", "Hiragino Mincho ProN", "Yu Mincho", serif;
 
@@ -91,8 +91,6 @@
   --animate-bob-slow: bob 9s ease-in-out infinite;
   --animate-ripple: ripple 4.5s ease-out infinite;
   --animate-spin-slow: spin 18s linear infinite;
-  --animate-flow: flow 1.1s linear infinite;
-  --animate-flow-slow: flow 2.4s linear infinite;
   --animate-flicker: flicker 3.2s ease-in-out infinite;
   --animate-current: current 2.8s linear infinite;
   --animate-float-up: float-up 7s ease-in infinite;
@@ -232,22 +230,28 @@
   .bg-grain {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
   }
-  .bg-falls {
-    background-image:
-      repeating-linear-gradient(
-        180deg,
-        transparent 0 26px,
-        color-mix(in oklch, var(--foam) 55%, transparent) 26px 30px,
-        transparent 30px 64px
-      ),
-      repeating-linear-gradient(
-        90deg,
-        color-mix(in oklch, var(--sea-light) 80%, transparent) 0 9px,
-        color-mix(in oklch, var(--foam) 35%, transparent) 9px 12px,
-        color-mix(in oklch, var(--sea) 85%, transparent) 12px 23px,
-        color-mix(in oklch, var(--foam) 20%, transparent) 23px 25px
-      );
-    background-size: 100% 64px, 25px 100%;
+  .bg-falls-base {
+    background: linear-gradient(
+      90deg,
+      var(--sea) 0%,
+      var(--sea-light) 14%,
+      color-mix(in oklch, var(--foam) 45%, var(--sea-light)) 30%,
+      var(--sea-light) 44%,
+      color-mix(in oklch, var(--foam) 60%, var(--sea-light)) 52%,
+      var(--sea-light) 64%,
+      color-mix(in oklch, var(--foam) 35%, var(--sea-light)) 80%,
+      var(--sea) 100%
+    );
+  }
+  .bg-falls-streaks {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='260' viewBox='0 0 120 260'%3E%3Cg stroke='%23eef6ff' stroke-linecap='round' fill='none'%3E%3Cpath d='M8 10v90' stroke-width='2' stroke-opacity='.55'/%3E%3Cpath d='M22 130v110' stroke-width='3' stroke-opacity='.7'/%3E%3Cpath d='M37 40v60' stroke-width='1.5' stroke-opacity='.45'/%3E%3Cpath d='M51 150v70' stroke-width='2.5' stroke-opacity='.6'/%3E%3Cpath d='M64 0v120' stroke-width='3.5' stroke-opacity='.75'/%3E%3Cpath d='M79 170v80' stroke-width='2' stroke-opacity='.5'/%3E%3Cpath d='M92 60v100' stroke-width='3' stroke-opacity='.65'/%3E%3Cpath d='M108 200v50' stroke-width='1.5' stroke-opacity='.45'/%3E%3Cpath d='M112 20v70' stroke-width='2' stroke-opacity='.55'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 120px 260px;
+    animation: fall 0.9s linear infinite;
+  }
+  .bg-falls-streaks-slow {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='320' viewBox='0 0 90 320'%3E%3Cg stroke='%23cfe3ff' stroke-linecap='round' fill='none' stroke-opacity='.35'%3E%3Cpath d='M12 30v160' stroke-width='5'/%3E%3Cpath d='M44 140v170' stroke-width='6'/%3E%3Cpath d='M74 10v130' stroke-width='4'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 90px 320px;
+    animation: fall-slow 1.8s linear infinite;
   }
   .mask-fade-y {
     mask-image: linear-gradient(180deg, transparent, black 12%, black 88%, transparent);
@@ -268,9 +272,13 @@
   0% { transform: scale(0.7); opacity: 0.55; }
   100% { transform: scale(1.5); opacity: 0; }
 }
-@keyframes flow {
-  from { background-position: 0 0, 0 0; }
-  to { background-position: 0 64px, 0 0; }
+@keyframes fall {
+  from { background-position: 0 0; }
+  to { background-position: 0 260px; }
+}
+@keyframes fall-slow {
+  from { background-position: 0 0; }
+  to { background-position: 0 320px; }
 }
 @keyframes drift {
   from { background-position: 0 0; }

@@ -47,6 +47,8 @@ export interface Passage {
   kanji: string;
   kanjiMeaning: string;
   title: string;
+  /** Compact label for small screens and the top bar. */
+  short: string;
   routeName: string;
   gateLine: string;
   blurb: string;
@@ -88,6 +90,7 @@ export const passages: Passage[] = [
     kanji: "学",
     kanjiMeaning: "learning",
     title: "Education & Academics",
+    short: "Education",
     routeName: "The Scholar’s Current",
     gateLine: "Two IIMs at once, McKinsey Forward and a ticket toward Hiroshima.",
     blurb:
@@ -99,6 +102,7 @@ export const passages: Passage[] = [
     kanji: "創",
     kanjiMeaning: "to create",
     title: "Entrepreneurship",
+    short: "Ventures",
     routeName: "The Founder’s Grand Line",
     gateLine: "Founder & CTO at Open Cupboard, E-Cell founder’s club, campaigns and a published pen.",
     blurb:
@@ -110,6 +114,7 @@ export const passages: Passage[] = [
     kanji: "技",
     kanjiMeaning: "technique",
     title: "Skills",
+    short: "Skills",
     routeName: "The Skill Falls",
     gateLine: "Too many to sail past — so the ship drops straight down the waterfall.",
     blurb:

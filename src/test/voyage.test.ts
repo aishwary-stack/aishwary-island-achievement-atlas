@@ -29,7 +29,7 @@ describe("voyage rules", () => {
   });
 
   it("sails IIM Kozhikode and IIM Bangalore together as twin islands", () => {
-    const twin = educationRows[0].islands.map((i) => i.id);
+    const twin = educationRows[0]?.islands.map((i) => i.id);
     expect(twin).toEqual(["iim-kozhikode", "iim-bangalore"]);
   });
 

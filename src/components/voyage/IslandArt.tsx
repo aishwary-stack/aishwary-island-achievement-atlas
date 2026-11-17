@@ -151,11 +151,13 @@ function Hiroshima() {
   return (
     <g>
       {/* cherry trees */}
-      {[
-        [70, 120, 16],
-        [198, 118, 18],
-        [178, 136, 11],
-      ].map(([x, y, r]) => (
+      {(
+        [
+          [70, 120, 16],
+          [198, 118, 18],
+          [178, 136, 11],
+        ] as const
+      ).map(([x, y, r]) => (
         <g key={`${x}`}>
           <rect x={x - 1.5} y={y} width={3} height={14} className="fill-wood" />
           <circle cx={x} cy={y - 2} r={r} className="fill-blossom" />
