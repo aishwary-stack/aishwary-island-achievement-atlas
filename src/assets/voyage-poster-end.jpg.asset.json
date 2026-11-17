@@ -1,11 +1,11 @@
 {
-  "version": 1,
   "asset_id": "b68ae43d-6c7d-46af-9757-079ae42cee5d",
-  "project_id": "e81c7b7a-4583-49f6-956c-65d385653643",
-  "url": "/__l5e/assets-v1/b68ae43d-6c7d-46af-9757-079ae42cee5d/voyage-poster-end.jpg",
-  "r2_key": "a/v1/e81c7b7a-4583-49f6-956c-65d385653643/b68ae43d-6c7d-46af-9757-079ae42cee5d/voyage-poster-end.jpg",
-  "original_filename": "voyage-poster-end.jpg",
-  "size": 62688,
   "content_type": "image/jpeg",
-  "created_at": "2026-11-17T14:41:52Z"
+  "created_at": "2026-11-17T14:41:52Z",
+  "original_filename": "voyage-poster-end.jpg",
+  "project_id": "04bcdf40-839c-4b8c-a5aa-92f6a1351ba1",
+  "r2_key": "a/v1/04bcdf40-839c-4b8c-a5aa-92f6a1351ba1/b68ae43d-6c7d-46af-9757-079ae42cee5d/voyage-poster-end.jpg",
+  "size": 62688,
+  "url": "/__l5e/assets-v1/b68ae43d-6c7d-46af-9757-079ae42cee5d/voyage-poster-end.jpg",
+  "version": 1
 }
