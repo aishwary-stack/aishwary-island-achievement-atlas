@@ -1,11 +1,11 @@
 {
-  "version": 1,
   "asset_id": "1a69e342-af43-473a-bb9d-fd463104196d",
-  "project_id": "b60c594c-1389-47fa-9324-3f34ce6b69a1",
-  "url": "/__l5e/assets-v1/1a69e342-af43-473a-bb9d-fd463104196d/grand-line-voyage-phone-1280.mp4",
-  "r2_key": "a/v1/b60c594c-1389-47fa-9324-3f34ce6b69a1/1a69e342-af43-473a-bb9d-fd463104196d/grand-line-voyage-phone-1280.mp4",
-  "original_filename": "grand-line-voyage-phone-1280.mp4",
-  "size": 12819484,
   "content_type": "video/mp4",
-  "created_at": "2026-11-17T15:45:07Z"
+  "created_at": "2026-11-17T15:45:07Z",
+  "original_filename": "grand-line-voyage-phone-1280.mp4",
+  "project_id": "57780a53-5947-4c86-8940-4c52e0df94fd",
+  "r2_key": "a/v1/57780a53-5947-4c86-8940-4c52e0df94fd/1a69e342-af43-473a-bb9d-fd463104196d/grand-line-voyage-phone-1280.mp4",
+  "size": 12819484,
+  "url": "/__l5e/assets-v1/1a69e342-af43-473a-bb9d-fd463104196d/grand-line-voyage-phone-1280.mp4",
+  "version": 1
 }
