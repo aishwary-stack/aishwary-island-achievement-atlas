@@ -1,4 +1,4 @@
-import { ArrowUpRight, Copy, Globe, Instagram, Linkedin, Mail } from "lucide-react";
+import { ArrowUpRight, Copy, FileText, Globe, Instagram, Linkedin, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 import { contact, OPEN_CUPBOARD_URL, portraits, profile } from "@/data/portfolio";
@@ -54,6 +54,7 @@ export function ContactPort() {
             <SocialLink href={contact.instagram.url} label="Instagram" handle={contact.instagram.handle} icon={<Instagram className="h-5 w-5" />} />
             <SocialLink href={contact.linkedin.url} label="LinkedIn" handle={contact.linkedin.handle} icon={<Linkedin className="h-5 w-5" />} />
             <SocialLink href={OPEN_CUPBOARD_URL} label="His studio · Open Cupboard" handle="opencupboard.in" icon={<Globe className="h-5 w-5" />} />
+            <SocialLink href={contact.resume.url} label={contact.resume.label} handle={contact.resume.handle} icon={<FileText className="h-5 w-5" />} />
           </div>
         </div>
       </div>

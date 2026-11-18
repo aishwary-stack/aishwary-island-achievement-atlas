@@ -2,6 +2,7 @@
  * Every word on the voyage lives here. Facts come from Aishwary's LinkedIn
  * (experience + skills), his IIMK journey post and the official program sites.
  */
+import resumePdf from "@/assets/aishwary-nagaria-resume.pdf.asset.json";
 import wantedPhoto from "@/assets/aishwary-wanted.jpg.asset.json";
 
 export type PassageId = "education" | "experience" | "skills";
@@ -91,6 +92,11 @@ export const contact = {
   linkedin: {
     handle: "Aishwary Nagaria",
     url: "https://www.linkedin.com/in/aishwary-nagaria-7a9a24370/",
+  },
+  resume: {
+    label: "Resume",
+    handle: "Download the PDF",
+    url: resumePdf.url,
   },
 } as const;
 
